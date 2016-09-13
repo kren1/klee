@@ -105,7 +105,7 @@ public:
                                         // the ConstraintManager constructor that will eventually
                                         // be invoked.
 
-  IndependentElementSet() {}
+  IndependentElementSet() = delete;
   IndependentElementSet(ref<Expr> e) {
     exprs.push_back(e);
     // Track all reads in the program.  Determines whether reads are
@@ -138,18 +138,12 @@ public:
       }
     }
   }
-  IndependentElementSet(const IndependentElementSet &ies) : 
-    elements(ies.elements),
-    wholeObjects(ies.wholeObjects),
-    exprs(ies.exprs) {}
+  IndependentElementSet(const IndependentElementSet &ies) = delete;
 
-  IndependentElementSet &operator=(const IndependentElementSet &ies) {
-    elements = ies.elements;
-    wholeObjects = ies.wholeObjects;
-    exprs = ies.exprs;
-    return *this;
-  }
+  IndependentElementSet &operator=(const IndependentElementSet &ies) = delete;
 
+  IndependentElementSet(IndependentElementSet &&set) = default;
+  IndependentElementSet &operator=(IndependentElementSet &&set) = default;
   void print(llvm::raw_ostream &os) const {
     os << "{";
     bool first = true;
@@ -288,7 +282,7 @@ getAllIndependentConstraintsSets(const Query &query) {
     std::list<IndependentElementSet> *done =
         new std::list<IndependentElementSet>;
     while (factors->size() > 0) {
-      IndependentElementSet current = factors->front();
+      IndependentElementSet current = std::move(factors->front());
       factors->pop_front();
       // This list represents the set of factors that are separate from current.
       // Those that are not inserted into this list (queue) intersect with
@@ -296,7 +290,7 @@ getAllIndependentConstraintsSets(const Query &query) {
       std::list<IndependentElementSet> *keep =
           new std::list<IndependentElementSet>;
       while (factors->size() > 0) {
-        IndependentElementSet compare = factors->front();
+        IndependentElementSet compare = std::move(factors->front());
         factors->pop_front();
         if (current.intersects(compare)) {
           if (current.add(compare)) {
@@ -305,10 +299,10 @@ getAllIndependentConstraintsSets(const Query &query) {
             doneLoop = false;
           }
         } else {
-          keep->push_back(compare);
+          keep->emplace_back(std::move(compare));
         }
       }
-      done->push_back(current);
+      done->emplace_back(std::move(current));
       delete factors;
       factors = keep;
     }
@@ -343,7 +337,7 @@ IndependentElementSet getIndependentConstraints(const Query& query,
         // Means that we have added (z=y)added to (x=y)
         // Now need to see if there are any (z=?)'s
       } else {
-        newWorklist.push_back(*it);
+        newWorklist.emplace_back(std::move(*it));
       }
     }
     worklist.swap(newWorklist);
