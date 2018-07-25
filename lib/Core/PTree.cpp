@@ -46,6 +46,29 @@ void PTree::remove(Node *n) {
     delete n;
     n = p;
   } while (n && !n->left.getPointer() && !n->right.getPointer());
+
+  if (n) {
+    // We're now at a node that has exactly one child; we've just deleted the
+    // other one. Eliminate the node and connect its child to the parent
+    // directly (if it's not the root).
+    auto child = n->left.getPointer() ? n->left : n->right;
+    Node *parent = n->parent;
+
+    child.getPointer()->parent = parent;
+    if (!parent) {
+      // We're at the root.
+      root = child;
+    } else {
+      if (n == parent->left.getPointer()) {
+        parent->left = child;
+      } else {
+        assert(n == parent->right.getPointer());
+        parent->right = child;
+      }
+    }
+
+    delete n;
+  }
 }
 
 void PTree::dump(llvm::raw_ostream &os) {
