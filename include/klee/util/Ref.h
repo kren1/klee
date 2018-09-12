@@ -7,6 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file Ref.h
+ * @brief Implements smart-pointer ref<> used by KLEE.
+ *
+ * ## Basic usage:
+ *
+ * Add the following to your struct/class to enable ref<> pointer usage
+ * @code{.cpp}
+ *
+ * struct MyStruct{
+ *   ...
+ *   /// @brief Required by klee::ref-managed objects
+ *   struct ReferenceCounter __refCount;
+ *   ...
+ * }
+ * @endcode
+ *
+ */
+
 #ifndef KLEE_REF_H
 #define KLEE_REF_H
 
@@ -26,6 +45,12 @@ namespace llvm {
 
 namespace klee {
 
+/// Reference counter to be used as part of a ref-managed struct or class
+struct ReferenceCounter {
+  unsigned refCount;
+  ReferenceCounter() : refCount(0) {}
+};
+
 template<class T>
 class ref {
   T *ptr;
@@ -38,11 +63,11 @@ public:
 private:
   void inc() const {
     if (ptr)
-      ++ptr->refCount;
+      ++ptr->__refCount.refCount;
   }
 
   void dec() const {
-    if (ptr && --ptr->refCount == 0)
+    if (ptr && --ptr->__refCount.refCount == 0)
       delete ptr;
   }
 
