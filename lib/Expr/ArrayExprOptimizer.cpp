@@ -284,7 +284,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       // reverse the list
       std::vector<const UpdateNode *> us;
       us.reserve(read->updates.getSize());
-      for (const UpdateNode *un = read->updates.head; un; un = un->next)
+      for (const UpdateNode *un = read->updates.head.get(); un; un = un->next.get())
         us.push_back(un);
 
       auto arrayConstValues = read->updates.root->constantValues;
@@ -361,12 +361,11 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
           arrayConstValues.push_back(ConstantExpr::create(0, Expr::Int8));
         }
       }
-
       // We need to read updates from lest recent to most recent, therefore
       // reverse the list
       std::vector<const UpdateNode *> us;
       us.reserve(read->updates.getSize());
-      for (const UpdateNode *un = read->updates.head; un; un = un->next)
+      for (const UpdateNode *un = read->updates.head.get(); un; un = un->next.get())
         us.push_back(un);
 
       for (auto it = us.rbegin(); it != us.rend(); it++) {
