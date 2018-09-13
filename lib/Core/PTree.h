@@ -11,9 +11,11 @@
 #define __UTIL_PTREE_H__
 
 #include <klee/Expr.h>
+#include <klee/ExecutionState.h>
+#include "llvm/IR/Instruction.h"
+#include "klee/Internal/Module/KInstruction.h"
 
 namespace klee {
-  class ExecutionState;
 
   class PTree { 
     typedef ExecutionState* data_type;
@@ -39,6 +41,7 @@ namespace klee {
     PTreeNode *parent, *left, *right;
     ExecutionState *data;
     ref<Expr> condition;
+    llvm::Instruction *br;
 
   private:
     PTreeNode(PTreeNode *_parent, ExecutionState *_data);

@@ -94,7 +94,8 @@ PTreeNode::PTreeNode(PTreeNode *_parent,
     left(0),
     right(0),
     data(_data),
-    condition(0) {
+    condition(0),
+    br(0) {
 }
 
 PTreeNode::~PTreeNode() {

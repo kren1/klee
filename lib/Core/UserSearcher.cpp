@@ -29,6 +29,7 @@ namespace {
 			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS), where scheduling decisions are taken at the level of (2-way) forks"),
 			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
 			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
+			clEnumValN(Searcher::Profile, "prof", "profile based searcher"),
 			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
 			clEnumValN(Searcher::NURS_MD2U, "nurs:md2u", "use NURS with Min-Dist-to-Uncovered"),
 			clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
@@ -86,6 +87,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   switch (type) {
   case Searcher::DFS: searcher = new DFSSearcher(); break;
   case Searcher::BFS: searcher = new BFSSearcher(); break;
+  case Searcher::Profile: searcher = new ProfileSearcher(executor); break;
   case Searcher::RandomState: searcher = new RandomSearcher(); break;
   case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
   case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;

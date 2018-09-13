@@ -978,6 +978,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     current.ptreeNode->data = 0;
+    current.ptreeNode->br = current.prevPC->inst;
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
     falseState->ptreeNode = res.first;

@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/IR/LLVMContext.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -297,6 +298,61 @@ RandomPathSearcher::update(ExecutionState *current,
 bool RandomPathSearcher::empty() { 
   return executor.states.empty(); 
 }
+ProfileSearcher::ProfileSearcher(Executor &_executor)
+  : executor(_executor), engine(rd()) {
+}
+
+ProfileSearcher::~ProfileSearcher() {
+}
+
+ExecutionState &ProfileSearcher::selectState() {
+  uint64_t trueB=1, falseB=1;
+  PTree::Node *n = executor.processTree->root;
+  while (!n->data) {
+
+    if (!n->left) {
+      n = n->right;
+    } else if (!n->right) {
+      n = n->left;
+    } else {
+     // errs() << "data pc is: \n";
+     // n->br->dump();
+      MDNode* MD = n->br->getMetadata(LLVMContext::MD_prof);
+      if(MD)  {
+        MDString *Tag = cast<MDString>(MD->getOperand(0));
+        if (Tag && Tag->getString().equals("branch_weights")) {
+            trueB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+            falseB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
+        }
+      }
+      double p = (double)trueB / (double)falseB;
+      bool r;
+      if(p > 1.0) {
+        std::bernoulli_distribution d(1.0/p);
+        r = !d(engine);
+      } else {
+        std::bernoulli_distribution d(p);
+        r = d(engine);
+      }
+
+      n = !r ? n->left : n->right;
+    }
+  }
+
+  return *n->data;
+}
+
+void
+ProfileSearcher::update(ExecutionState *current,
+                           const std::vector<ExecutionState *> &addedStates,
+                           const std::vector<ExecutionState *> &removedStates) {
+}
+
+bool ProfileSearcher::empty() { 
+  return executor.states.empty(); 
+}
+
+
 
 ///
 

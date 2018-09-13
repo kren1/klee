@@ -71,6 +71,7 @@ namespace klee {
       BFS,
       RandomState,
       RandomPath,
+      Profile,
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
@@ -177,6 +178,26 @@ namespace klee {
     bool empty();
     void printName(llvm::raw_ostream &os) {
       os << "RandomPathSearcher\n";
+    }
+  };
+
+
+  class ProfileSearcher : public Searcher {
+    Executor &executor;
+    std::random_device rd;
+    std::mt19937 engine;
+
+  public:
+    ProfileSearcher(Executor &_executor);
+    ~ProfileSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty();
+    void printName(llvm::raw_ostream &os) {
+      os << "ProfileSearcher\n";
     }
   };
 
