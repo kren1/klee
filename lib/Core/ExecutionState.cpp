@@ -168,9 +168,9 @@ llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) 
   MemoryMap::iterator it = mm.begin();
   MemoryMap::iterator ie = mm.end();
   if (it!=ie) {
-    os << "MO" << it->first->id << ":" << it->second;
+    os << "MO" << it->first->id << ":" << it->second.get();
     for (++it; it!=ie; ++it)
-      os << ", MO" << it->first->id << ":" << it->second;
+      os << ", MO" << it->first->id << ":" << it->second.get();
   }
   os << "}";
   return os;
@@ -267,7 +267,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
       }
       return false;
     }
-    if (ai->second != bi->second) {
+    if (ai->second.get() != bi->second.get()) {
       if (DebugLogStateMerge)
         llvm::errs() << "\t\tmutated: " << ai->first->id << "\n";
       mutated.insert(ai->first);

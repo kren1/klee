@@ -16,7 +16,6 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/util/ArrayCache.h"
 
-#include "ObjectHolder.h"
 #include "MemoryManager.h"
 
 #include "llvm/IR/Function.h"
@@ -36,27 +35,6 @@ namespace {
   cl::opt<bool>
   UseConstantArrays("use-constant-arrays",
                     cl::init(true));
-}
-
-/***/
-
-ObjectHolder::ObjectHolder(const ObjectHolder &b) : os(b.os) { 
-  if (os) ++os->refCount; 
-}
-
-ObjectHolder::ObjectHolder(ObjectState *_os) : os(_os) { 
-  if (os) ++os->refCount; 
-}
-
-ObjectHolder::~ObjectHolder() { 
-  if (os && --os->refCount==0) delete os; 
-}
-  
-ObjectHolder &ObjectHolder::operator=(const ObjectHolder &b) {
-  if (b.os) ++b.os->refCount;
-  if (os && --os->refCount==0) delete os;
-  os = b.os;
-  return *this;
 }
 
 /***/
@@ -94,7 +72,6 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 
 ObjectState::ObjectState(const MemoryObject *mo)
   : copyOnWriteOwner(0),
-    refCount(0),
     object(mo),
     concreteStore(new uint8_t[mo->size]),
     concreteMask(0),
@@ -116,7 +93,6 @@ ObjectState::ObjectState(const MemoryObject *mo)
 
 ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
   : copyOnWriteOwner(0),
-    refCount(0),
     object(mo),
     concreteStore(new uint8_t[mo->size]),
     concreteMask(0),
@@ -132,7 +108,6 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
 
 ObjectState::ObjectState(const ObjectState &os) 
   : copyOnWriteOwner(0),
-    refCount(0),
     object(os.object),
     concreteStore(new uint8_t[os.size]),
     concreteMask(os.concreteMask ? new BitArray(*os.concreteMask, os.size) : 0),
