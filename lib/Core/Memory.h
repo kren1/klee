@@ -34,10 +34,13 @@ class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
   friend class ExecutionState;
+  friend class ref<MemoryObject>;
+  friend class ref<const MemoryObject>;
 
 private:
   static int counter;
-  mutable unsigned refCount;
+  /// @brief Required by klee::ref-managed objects
+  mutable struct ReferenceCounter __refCount;
 
 public:
   unsigned id;
@@ -74,8 +77,7 @@ public:
   // XXX this is just a temp hack, should be removed
   explicit
   MemoryObject(uint64_t _address) 
-    : refCount(0),
-      id(counter++), 
+    : id(counter++),
       address(_address),
       size(0),
       isFixed(true),
@@ -87,8 +89,7 @@ public:
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
                MemoryManager *_parent)
-    : refCount(0), 
-      id(counter++),
+    : id(counter++),
       address(_address),
       size(_size),
       name("unnamed"),
@@ -142,6 +143,22 @@ public:
       return ConstantExpr::alloc(0, Expr::Bool);
     }
   }
+
+  int compare(const MemoryObject &b) const {
+    // Short-cut with id
+    if (id == b.id)
+      return 0;
+    if (address != b.address)
+      return (address < b.address ? -1 : 1);
+
+    if (size != b.size)
+      return (size < b.size ? -1 : 1);
+
+    if (allocSite != b.allocSite)
+      return (allocSite < b.allocSite ? -1 : 1);
+
+    return 0;
+  }
 };
 
 class ObjectState {
@@ -154,7 +171,7 @@ private:
   /// @brief Required by klee::ref-managed objects
   struct ReferenceCounter __refCount;
 
-  const MemoryObject *object;
+  ref<const MemoryObject> object;
 
   uint8_t *concreteStore;
 
@@ -187,7 +204,7 @@ public:
   ObjectState(const ObjectState &os);
   ~ObjectState();
 
-  const MemoryObject *getObject() const { return object; }
+  const MemoryObject *getObject() const { return object.get(); }
 
   void setReadOnly(bool ro) { readOnly = ro; }
 
