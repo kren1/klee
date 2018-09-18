@@ -184,8 +184,7 @@ namespace klee {
 
   class ProfileSearcher : public Searcher {
     Executor &executor;
-    std::random_device rd;
-    std::mt19937 engine;
+    std::minstd_rand0 engine;
 
   public:
     ProfileSearcher(Executor &_executor);

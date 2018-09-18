@@ -12,8 +12,6 @@
 
 #include <klee/Expr.h>
 #include <klee/ExecutionState.h>
-#include "llvm/IR/Instruction.h"
-#include "klee/Internal/Module/KInstruction.h"
 
 namespace klee {
 
@@ -41,7 +39,7 @@ namespace klee {
     PTreeNode *parent, *left, *right;
     ExecutionState *data;
     ref<Expr> condition;
-    llvm::Instruction *br;
+    double p;
 
   private:
     PTreeNode(PTreeNode *_parent, ExecutionState *_data);

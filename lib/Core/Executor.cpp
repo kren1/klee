@@ -978,7 +978,19 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     current.ptreeNode->data = 0;
-    current.ptreeNode->br = current.prevPC->inst;
+
+    uint64_t trueB, falseB; 
+    MDNode* MD = current.prevPC->inst->getMetadata(LLVMContext::MD_prof);
+    if(MD)  {
+      MDString *Tag = cast<MDString>(MD->getOperand(0));
+      if (Tag && Tag->getString().equals("branch_weights")) {
+          trueB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+          falseB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
+      }
+    }
+    double p = (double)trueB / (double)falseB;
+    current.ptreeNode->p = p;      
+
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
     falseState->ptreeNode = res.first;

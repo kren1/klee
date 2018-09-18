@@ -299,7 +299,7 @@ bool RandomPathSearcher::empty() {
   return executor.states.empty(); 
 }
 ProfileSearcher::ProfileSearcher(Executor &_executor)
-  : executor(_executor), engine(rd()) {
+  : executor(_executor), engine(4323432) {
 }
 
 ProfileSearcher::~ProfileSearcher() {
@@ -317,21 +317,12 @@ ExecutionState &ProfileSearcher::selectState() {
     } else {
      // errs() << "data pc is: \n";
      // n->br->dump();
-      MDNode* MD = n->br->getMetadata(LLVMContext::MD_prof);
-      if(MD)  {
-        MDString *Tag = cast<MDString>(MD->getOperand(0));
-        if (Tag && Tag->getString().equals("branch_weights")) {
-            trueB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-            falseB = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
-        }
-      }
-      double p = (double)trueB / (double)falseB;
-      bool r;
-      if(p > 1.0) {
-        std::bernoulli_distribution d(1.0/p);
+     bool r;
+      if(n->p > 1.0) {
+        std::bernoulli_distribution d(1.0/n->p);
         r = !d(engine);
       } else {
-        std::bernoulli_distribution d(p);
+        std::bernoulli_distribution d(n->p);
         r = d(engine);
       }
 
