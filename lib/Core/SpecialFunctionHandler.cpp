@@ -79,6 +79,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("klee_silent_exit", handleSilentExit),
   addDNR("klee_report_error", handleReportError),
   add("calloc", handleCalloc, true),
+  add("klee_kill_all_other", handleKillAllOther, false),
   add("free", handleFree, false),
   add("klee_assume", handleAssume, false),
   add("klee_check_memory_access", handleCheckMemoryAccess, false),
@@ -299,6 +300,17 @@ void SpecialFunctionHandler::handleSilentExit(ExecutionState &state,
                                               std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==1 && "invalid number of arguments to exit");
   executor.terminateState(state);
+}
+
+void SpecialFunctionHandler::handleKillAllOther(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==0 && "invalid number of arguments to exit");
+  for(auto otherState : executor.states) {
+      if(otherState != &state) {
+        executor.terminateState(*otherState);
+      }
+  }
 }
 
 void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
