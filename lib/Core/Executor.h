@@ -81,6 +81,7 @@ namespace klee {
 class Executor : public Interpreter {
   friend class RandomPathSearcher;
   friend class ProfileSearcher;
+  friend class InverseProfileSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;

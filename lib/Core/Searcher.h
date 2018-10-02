@@ -72,6 +72,7 @@ namespace klee {
       RandomState,
       RandomPath,
       Profile,
+      InverseProfile,
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
@@ -181,7 +182,6 @@ namespace klee {
     }
   };
 
-
   class ProfileSearcher : public Searcher {
     Executor &executor;
     std::minstd_rand0 engine;
@@ -197,6 +197,24 @@ namespace klee {
     bool empty();
     void printName(llvm::raw_ostream &os) {
       os << "ProfileSearcher\n";
+    }
+  };
+
+  class InverseProfileSearcher : public Searcher {
+    Executor &executor;
+    std::minstd_rand0 engine;
+
+  public:
+    InverseProfileSearcher(Executor &_executor);
+    ~InverseProfileSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty();
+    void printName(llvm::raw_ostream &os) {
+      os << "InverseProfileSearcher\n";
     }
   };
 

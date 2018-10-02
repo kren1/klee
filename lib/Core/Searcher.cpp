@@ -298,6 +298,7 @@ RandomPathSearcher::update(ExecutionState *current,
 bool RandomPathSearcher::empty() { 
   return executor.states.empty(); 
 }
+
 ProfileSearcher::ProfileSearcher(Executor &_executor)
   : executor(_executor), engine(4323432) {
 }
@@ -340,6 +341,52 @@ ProfileSearcher::update(ExecutionState *current,
 }
 
 bool ProfileSearcher::empty() { 
+  return executor.states.empty(); 
+}
+
+InverseProfileSearcher::InverseProfileSearcher(Executor &_executor)
+  : executor(_executor), engine(4323431) {
+}
+
+InverseProfileSearcher::~InverseProfileSearcher() {
+}
+
+//Biases for the not taken paths!
+ExecutionState &InverseProfileSearcher::selectState() {
+  uint64_t trueB=1, falseB=1;
+  PTree::Node *n = executor.processTree->root;
+  while (!n->data) {
+
+    if (!n->left) {
+      n = n->right;
+    } else if (!n->right) {
+      n = n->left;
+    } else {
+     // errs() << "data pc is: \n";
+     // n->br->dump();
+     bool r;
+      if(n->p > 1.0) {
+        std::bernoulli_distribution d(1.0/n->p);
+        r = !d(engine);
+      } else {
+        std::bernoulli_distribution d(n->p);
+        r = d(engine);
+      }
+
+      n = r ? n->left : n->right;
+    }
+  }
+
+  return *n->data;
+}
+
+void
+InverseProfileSearcher::update(ExecutionState *current,
+                           const std::vector<ExecutionState *> &addedStates,
+                           const std::vector<ExecutionState *> &removedStates) {
+}
+
+bool InverseProfileSearcher::empty() { 
   return executor.states.empty(); 
 }
 
