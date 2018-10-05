@@ -989,6 +989,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
     double p = (double)trueB / (double)falseB;
+    if(trueB == 1 && falseB == 1) p = 0.5;
+    else if(trueB == 1) p = 0;
+    else if(falseB == 1) p = 1;
     current.ptreeNode->p = p;      
 
     std::pair<PTree::Node*, PTree::Node*> res =
