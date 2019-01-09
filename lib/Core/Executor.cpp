@@ -113,6 +113,11 @@ namespace {
 			      cl::desc("Only output test cases covering new code (default=off)."),
                               cl::cat(TestGenCat));
 
+  cl::opt<bool> NoCoverageStates(
+      "no-coverage-tests", cl::init(false),
+      cl::desc("Do not generate tests for coverage (default=off)."),
+      cl::cat(TestGenCat));
+
   cl::opt<bool>
   EmitAllErrors("emit-all-errors",
                 cl::init(false),
@@ -3048,7 +3053,8 @@ void Executor::terminateState(ExecutionState &state) {
 
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+  if ((!NoCoverageStates &&
+       (!OnlyOutputStatesCoveringNew || state.coveredNew)) ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
