@@ -3399,74 +3399,62 @@ void Executor::executeAlloc(ExecutionState &state,
     // collapses the size expression with a select.
 
     size = optimizer.optimizeExpr(size, true);
+    Expr::Width W = size->getWidth();
 
-    ref<ConstantExpr> example;
-    bool success = solver->getValue(state, size, example);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
+    // See if a *really* big value is possible. If so assume
+    // malloc will fail for it, so lets fork and return 0.
+    StatePair hugeSize = 
+      fork(state, 
+           UleExpr::create(ConstantExpr::alloc(1U<<31, W), size),
+           true);
     
-    // Try and start with a small example.
-    Expr::Width W = example->getWidth();
-    while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
-      ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
-      bool res;
-      bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
-      assert(success && "FIXME: Unhandled solver failure");      
-      (void) success;
-      if (!res)
-        break;
-      example = tmp;
+    if (hugeSize.first) {
+      klee_message("NOTE: found huge malloc, returning 0");
+      bindLocal(target, *hugeSize.first, 
+                ConstantExpr::alloc(0, Context::get().getPointerWidth()));
     }
 
-    StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
+    if (hugeSize.second) {
+
+      StatePair zeroSize = 
+        fork(*(hugeSize.second),
+             EqExpr::create(ConstantExpr::alloc(0, W), size),
+             true);
+
+      if (zeroSize.first) {
+        bindLocal(target, *zeroSize.first, 
+                  ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+      }
+
+      if (zeroSize.second) {      
+        ExecutionState &s = *(zeroSize.second);
     
-    if (fixedSize.second) { 
-      // Check for exactly two values
-      ref<ConstantExpr> tmp;
-      bool success = solver->getValue(*fixedSize.second, size, tmp);
-      assert(success && "FIXME: Unhandled solver failure");      
-      (void) success;
-      bool res;
-      success = solver->mustBeTrue(*fixedSize.second, 
-                                   EqExpr::create(tmp, size),
-                                   res);
-      assert(success && "FIXME: Unhandled solver failure");      
-      (void) success;
-      if (res) {
-        executeAlloc(*fixedSize.second, tmp, isLocal,
-                     target, zeroMemory, reallocFrom);
-      } else {
-        // See if a *really* big value is possible. If so assume
-        // malloc will fail for it, so lets fork and return 0.
-        StatePair hugeSize = 
-          fork(*fixedSize.second, 
-               UltExpr::create(ConstantExpr::alloc(1U<<31, W), size),
-               true);
-        if (hugeSize.first) {
-          klee_message("NOTE: found huge malloc, returning 0");
-          bindLocal(target, *hugeSize.first, 
-                    ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+        // try to get a small value
+        ref<ConstantExpr> example = ConstantExpr::alloc(1U << 31, W);
+        
+        while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+          ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
+         
+          bool res;
+          bool success = solver->mayBeTrue(s, UleExpr::create(size, tmp), res);
+          assert(success && "FIXME: Unhandled solver failure");      
+          (void) success;
+          if (!res)
+            break;
+          example = tmp;
         }
         
-        if (hugeSize.second) {
+        s.addConstraint(UleExpr::create(size, example));
 
-          std::string Str;
-          llvm::raw_string_ostream info(Str);
-          ExprPPrinter::printOne(info, "  size expr", size);
-          info << "  concretization : " << example << "\n";
-          info << "  unbound example: " << tmp << "\n";
-          terminateStateOnError(*hugeSize.second, "concretized symbolic size",
-                                Model, NULL, info.str());
-        }
+        toConstant(s, size, "symbolic alloc");
+      
+        executeAlloc(s, size, isLocal, 
+                     target, zeroMemory, reallocFrom);
       }
     }
-
-    if (fixedSize.first) // can be zero when fork fails
-      executeAlloc(*fixedSize.first, example, isLocal, 
-                   target, zeroMemory, reallocFrom);
   }
 }
-
+ 
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
