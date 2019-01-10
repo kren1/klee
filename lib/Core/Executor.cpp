@@ -3429,11 +3429,11 @@ void Executor::executeAlloc(ExecutionState &state,
       if (zeroSize.second) {      
         ExecutionState &s = *(zeroSize.second);
     
-        // try to get a small value
-        ref<ConstantExpr> example = ConstantExpr::alloc(1U << 31, W);
+        // try to get a small upper bound value
+        ref<ConstantExpr> ub = ConstantExpr::alloc(1U << 31, W);
         
-        while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
-          ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
+        while (ub->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+          ref<ConstantExpr> tmp = ub->LShr(ConstantExpr::alloc(1, W));
          
           bool res;
           bool success = solver->mayBeTrue(s, UleExpr::create(size, tmp), res);
@@ -3441,12 +3441,32 @@ void Executor::executeAlloc(ExecutionState &state,
           (void) success;
           if (!res)
             break;
-          example = tmp;
+          ub = tmp;
         }
-        
-        s.addConstraint(UleExpr::create(size, example));
 
-        toConstant(s, size, "symbolic alloc");
+        ub->dump();
+
+        // try to get a reasonable lower bound value
+        ref<ConstantExpr> lb = ConstantExpr::alloc(1, W);
+        
+        while (lb->Ult(ub)->isTrue()) {
+          ref<ConstantExpr> tmp = lb->Shl(ConstantExpr::alloc(1, W));
+         
+          bool res;
+          bool success = solver->mayBeTrue(s, UleExpr::create(tmp, size), res);
+          assert(success && "FIXME: Unhandled solver failure");      
+          (void) success;
+          if (!res)
+            break;
+          lb = tmp;
+        }
+
+        lb->dump();
+        
+        s.addConstraint(UleExpr::create(lb, size));
+        s.addConstraint(UleExpr::create(size, ub));
+        
+        size = toConstant(s, size, "symbolic alloc");
       
         executeAlloc(s, size, isLocal, 
                      target, zeroMemory, reallocFrom);
