@@ -3412,6 +3412,7 @@ void Executor::executeAlloc(ExecutionState &state,
       klee_message("NOTE: found huge malloc, returning 0");
       bindLocal(target, *hugeSize.first, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+      terminateState(*(hugeSize.first));
     }
 
     if (hugeSize.second) {
