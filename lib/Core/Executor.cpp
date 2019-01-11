@@ -3062,7 +3062,8 @@ void Executor::terminateStateEarly(ExecutionState &state,
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
+  if ((!NoCoverageStates &&
+	(!OnlyOutputStatesCoveringNew || state.coveredNew)) || 
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
   terminateState(state);
