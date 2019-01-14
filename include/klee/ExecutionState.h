@@ -14,6 +14,7 @@
 #include "klee/Expr.h"
 #include "klee/Internal/ADT/TreeStream.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/Internal/Module/Cell.h"
 #include "klee/MergeHandler.h"
 
 // FIXME: We do not want to be exposing these? :(
@@ -27,7 +28,6 @@
 namespace klee {
 class Array;
 class CallPathNode;
-struct Cell;
 struct KFunction;
 struct KInstruction;
 class MemoryObject;
@@ -42,7 +42,7 @@ struct StackFrame {
   CallPathNode *callPathNode;
 
   std::vector<const MemoryObject *> allocas;
-  Cell *locals;
+  std::vector<Cell> locals;
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to
@@ -59,8 +59,6 @@ struct StackFrame {
   MemoryObject *varargs;
 
   StackFrame(KInstIterator caller, KFunction *kf);
-  StackFrame(const StackFrame &s);
-  ~StackFrame();
 };
 
 /// @brief ExecutionState representing a path under exploration
