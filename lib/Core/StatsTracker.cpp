@@ -19,6 +19,7 @@
 #include "klee/Internal/System/MemoryUsage.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/SolverStats.h"
+#include "klee/Interpreter.h"
 
 #include "CallPathManager.h"
 #include "CoreStats.h"
@@ -101,6 +102,10 @@ namespace {
 	       cl::init(true),
                cl::desc("Enable calltree tracking for instruction level statistics (default=on)"));
   
+  cl::opt<bool> DumpCoverageOnTheFly(
+      "coverage-on-the-fly", cl::init(false),
+      cl::desc("Dump newly covered instructions as soon as possible."));
+
 }
 
 ///
@@ -324,7 +329,14 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         es.instsSinceCovNew = 1;
 	++stats::coveredInstructions;
 	stats::uncoveredInstructions += (uint64_t)-1;
+	// Generate teste case for newly covered instruction: first of the basic block and more
+	// than one predecessor
+	if (DumpCoverageOnTheFly){
+       if(&*inst->getParent()->begin() == inst && !inst->getParent()->getSinglePredecessor() )
+
+	  executor.interpreterHandler->processTestCase(es, 0, 0);
       }
+    }
     }
   }
 
