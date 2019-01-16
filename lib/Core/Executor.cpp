@@ -3955,15 +3955,13 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   // the preferred constraints.  See test/Features/PreferCex.c for
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
-  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-    const auto &mo = state.symbolics[i].first;
-    std::vector< ref<Expr> >::const_iterator pi = 
-      mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
-    for (; pi != pie; ++pi) {
+  for (auto symbol : state.symbolics) {
+    const auto &mo = symbol.first;
+    for (auto &example : mo->cexPreferences) {
       bool mustBeTrue;
       // Attempt to bound byte to constraints held in cexPreferences
-      bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
-					mustBeTrue);
+      bool success =
+          solver->mustBeTrue(tmp, Expr::createIsZero(example), mustBeTrue);
       // If it isn't possible to constrain this particular byte in the desired
       // way (normally this would mean that the byte can't be constrained to
       // be between 0 and 127 without making the entire constraint list UNSAT)
@@ -3971,15 +3969,16 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
       if (!success) break;
       // If the particular constraint operated on in this iteration through
       // the loop isn't implied then add it to the list of constraints.
-      if (!mustBeTrue) tmp.addConstraint(*pi);
+      if (!mustBeTrue)
+        tmp.addConstraint(example);
     }
-    if (pi!=pie) break;
   }
 
-  std::vector< std::vector<unsigned char> > values;
   std::vector<const Array*> objects;
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    objects.push_back(state.symbolics[i].second);
+  for (auto &symbol : state.symbolics)
+    objects.push_back(symbol.second);
+
+  std::vector<std::vector<unsigned char>> values;
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(time::Span());
 
