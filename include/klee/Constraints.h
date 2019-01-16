@@ -33,8 +33,6 @@ public:
   ConstraintManager(const std::vector< ref<Expr> > &_constraints) :
     constraints(_constraints) {}
 
-  ConstraintManager(const ConstraintManager &cs) : constraints(cs.constraints) {}
-
   typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
 
   // given a constraint which is known to be valid, attempt to 

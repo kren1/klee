@@ -60,7 +60,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
   pushFrame(0, kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
+ExecutionState::ExecutionState(const std::vector<ref<Expr>> &assumptions)
     : constraints(assumptions), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {

@@ -67,9 +67,6 @@ public:
   typedef std::vector<StackFrame> stack_ty;
 
 private:
-  // unsupported, use copy constructor
-  ExecutionState &operator=(const ExecutionState &);
-
   std::map<std::string, std::string> fnAliases;
 
 public:
@@ -152,16 +149,17 @@ public:
   std::uint64_t steppedInstructions;
 
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState(const ExecutionState &state);
 
 public:
+  ExecutionState() = delete;
+  ExecutionState &operator=(const ExecutionState &) = delete;
+
   ExecutionState(KFunction *kf);
 
   // XXX total hack, just used to make a state so solver can
   // use on structure
   ExecutionState(const std::vector<ref<Expr> > &assumptions);
-
-  ExecutionState(const ExecutionState &state);
 
   ~ExecutionState();
 

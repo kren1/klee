@@ -3945,7 +3945,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    &res) {
   solver->setTimeout(coreSolverTimeout);
 
-  ExecutionState tmp(state);
+  std::vector<ref<Expr>> constraintsCopy(state.constraints.begin(), state.constraints.end());
+  ExecutionState tmp(constraintsCopy);
 
   // Go through each byte in every test case and attempt to restrict
   // it to the constraints contained in cexPreferences.  (Note:
@@ -3981,6 +3982,10 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     objects.push_back(state.symbolics[i].second);
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(time::Span());
+
+  // Add query costs from temporary state
+  state.queryCost += tmp.queryCost;
+
   if (!success) {
     klee_warning("unable to compute initial values (invalid constraints?)!");
     ExprPPrinter::printQuery(llvm::errs(), state.constraints,
