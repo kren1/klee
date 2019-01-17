@@ -18,75 +18,15 @@
 #include "klee/util/ExprUtil.h"
 #include "klee/util/Assignment.h"
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
-#include <vector>
-#include <ostream>
 #include <list>
+#include <map>
+#include <ostream>
+#include <vector>
 
 using namespace klee;
 using namespace llvm;
-
-template<class T>
-class DenseSet {
-  typedef std::set<T> set_ty;
-  set_ty s;
-
-public:
-  DenseSet() {}
-
-  void add(T x) {
-    s.insert(x);
-  }
-  void add(T start, T end) {
-    for (; start<end; start++)
-      s.insert(start);
-  }
-
-  // returns true iff set is changed by addition
-  bool add(const DenseSet &b) {
-    bool modified = false;
-    for (typename set_ty::const_iterator it = b.s.begin(), ie = b.s.end(); 
-         it != ie; ++it) {
-      if (modified || !s.count(*it)) {
-        modified = true;
-        s.insert(*it);
-      }
-    }
-    return modified;
-  }
-
-  bool intersects(const DenseSet &b) {
-    for (typename set_ty::iterator it = s.begin(), ie = s.end(); 
-         it != ie; ++it)
-      if (b.s.count(*it))
-        return true;
-    return false;
-  }
-
-  std::set<unsigned>::iterator begin(){
-    return s.begin();
-  }
-
-  std::set<unsigned>::iterator end(){
-    return s.end();
-  }
-
-  void print(llvm::raw_ostream &os) const {
-    bool first = true;
-    os << "{";
-    for (typename set_ty::iterator it = s.begin(), ie = s.end(); 
-         it != ie; ++it) {
-      if (first) {
-        first = false;
-      } else {
-        os << ",";
-      }
-      os << *it;
-    }
-    os << "}";
-  }
-};
 
 template <class T>
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -97,7 +37,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 class IndependentElementSet {
 public:
-  typedef std::map<const Array*, ::DenseSet<unsigned> > elements_ty;
+  typedef std::map<const Array *, llvm::BitVector> elements_ty;
   elements_ty elements;                 // Represents individual elements of array accesses (arr[1])
   std::set<const Array*> wholeObjects;  // Represents symbolically accessed arrays (arr[x])
   std::vector<ref<Expr> > exprs;        // All expressions that are associated with this factor
@@ -116,25 +56,33 @@ public:
     std::vector< ref<ReadExpr> > reads;
     findReads(e, /* visitUpdates= */ true, reads);
     for (unsigned i = 0; i != reads.size(); ++i) {
-      ReadExpr *re = reads[i].get();
+      const ReadExpr *re = reads[i].get();
       const Array *array = re->updates.root;
       
       // Reads of a constant array don't alias.
       if (re->updates.root->isConstantArray() && re->updates.head.isNull())
         continue;
 
-      if (!wholeObjects.count(array)) {
-        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
-          // if index constant, then add to set of constraints operating
-          // on that array (actually, don't add constraint, just set index)
-          ::DenseSet<unsigned> &dis = elements[array];
-          dis.add((unsigned) CE->getZExtValue(32));
-        } else {
-          elements_ty::iterator it2 = elements.find(array);
-          if (it2!=elements.end())
-            elements.erase(it2);
-          wholeObjects.insert(array);
-        }
+      // Skip rest if already marked as symbolic
+      if (wholeObjects.count(array))
+        continue;
+
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
+
+        // if index constant, then add to set of constraints operating
+        // on that array (actually, don't add constraint, just set index)
+        llvm::BitVector &dis = elements[array];
+        if (dis.empty())
+          dis.resize(array->size);
+        dis.set((unsigned)CE->getZExtValue(32));
+      } else {
+        // Remove information that array has been marked partially
+        auto it2 = elements.find(array);
+        if (it2 != elements.end())
+          elements.erase(it2);
+
+        // Add array as fully symbolic
+        wholeObjects.insert(array);
       }
     }
   }
@@ -147,22 +95,17 @@ public:
   void print(llvm::raw_ostream &os) const {
     os << "{";
     bool first = true;
-    for (std::set<const Array*>::iterator it = wholeObjects.begin(), 
-           ie = wholeObjects.end(); it != ie; ++it) {
-      const Array *array = *it;
-
+    for (const auto &array : wholeObjects) {
       if (first) {
         first = false;
       } else {
         os << ", ";
       }
-
       os << "MO" << array->name;
     }
-    for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
-         it != ie; ++it) {
-      const Array *array = it->first;
-      const ::DenseSet<unsigned> &dis = it->second;
+    for (const auto &element : elements) {
+      const auto &array = element.first;
+      const auto &dis = element.second;
 
       if (first) {
         first = false;
@@ -170,7 +113,19 @@ public:
         os << ", ";
       }
 
-      os << "MO" << array->name << " : " << dis;
+      os << "MO" << array->name << " : ";
+      bool first = true;
+      os << "{";
+      for (auto it = dis.set_bits_begin(), ie = dis.set_bits_end(); it != ie;
+           ++it) {
+        if (first) {
+          first = false;
+        } else {
+          os << ",";
+        }
+        os << *it;
+      }
+      os << "}";
     }
     os << "}";
   }
@@ -183,18 +138,18 @@ public:
           b.elements.find(array) != b.elements.end())
         return true;
     }
-    for (elements_ty::iterator it = elements.begin(), ie = elements.end();
-         it != ie; ++it) {
-      const Array *array = it->first;
+    for (auto &element : elements) {
+      const Array *array = element.first;
       // if the array we access is symbolic in b
       if (b.wholeObjects.count(array))
         return true;
-      elements_ty::const_iterator it2 = b.elements.find(array);
-      // if any of the elements we access are also accessed by b
-      if (it2 != b.elements.end()) {
-        if (it->second.intersects(it2->second))
-          return true;
-      }
+
+      auto it2 = b.elements.find(array);
+      if (it2 == b.elements.end())
+        continue;
+
+      if (element.second.anyCommon(it2->second))
+        return true;
     }
     return false;
   }
@@ -218,18 +173,23 @@ public:
         }
       }
     }
-    for (elements_ty::const_iterator it = b.elements.begin(), 
-           ie = b.elements.end(); it != ie; ++it) {
-      const Array *array = it->first;
-      if (!wholeObjects.count(array)) {
-        elements_ty::iterator it2 = elements.find(array);
-        if (it2==elements.end()) {
+    for (auto &element : b.elements) {
+      const auto &array = element.first;
+
+      // Skip, if already a fully symbolic array
+      if (wholeObjects.count(array))
+        continue;
+
+      // Try to insert element
+      auto inserted = elements.insert(element);
+      if (inserted.second)
+        // Success
+        modified = true;
+      else {
+        // Element already exists
+        if (inserted.first->second.anyCommon(element.second)) {
+          inserted.first->second |= element.second;
           modified = true;
-          elements.insert(*it);
-        } else {
-          // Now need to see if there are any (z=?)'s
-          if (it2->second.add(it->second))
-            modified = true;
         }
       }
     }
@@ -484,8 +444,9 @@ bool IndependentSolver::computeInitialValues(const Query& query,
           std::vector<unsigned char> * tempPtr = &retMap[arraysInFactor[i]];
           assert(tempPtr->size() == tempValues[i].size() &&
                  "we're talking about the same array here");
-          auto * ds = &factor.elements[arraysInFactor[i]];
-          for (std::set<unsigned>::iterator it2 = ds->begin(); it2 != ds->end(); it2++){
+          auto &ds = factor.elements[arraysInFactor[i]];
+          for (auto it2 = ds.set_bits_begin(), it2E = ds.set_bits_end();
+               it2 != it2E; it2++) {
             unsigned index = * it2;
             (* tempPtr)[index] = tempValues[i][index];
           }
