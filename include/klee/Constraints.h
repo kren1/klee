@@ -35,10 +35,6 @@ public:
 
   typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
 
-  // given a constraint which is known to be valid, attempt to 
-  // simplify the existing constraint set
-  void simplifyForValidConstraint(ref<Expr> e);
-
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);

@@ -93,10 +93,6 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
-  // XXX 
-}
-
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
