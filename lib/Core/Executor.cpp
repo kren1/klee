@@ -3446,8 +3446,6 @@ void Executor::executeAlloc(ExecutionState &state,
           ub = tmp;
         }
 
-        ub->dump();
-
         // try to get a reasonable lower bound value
         ref<ConstantExpr> lb = ConstantExpr::alloc(1, W);
         
@@ -3463,8 +3461,6 @@ void Executor::executeAlloc(ExecutionState &state,
           lb = tmp;
         }
 
-        lb->dump();
-        
         s.addConstraint(UleExpr::create(lb, size));
         s.addConstraint(UleExpr::create(size, ub));
         
