@@ -274,9 +274,21 @@ namespace {
            cl::desc("Use a watchdog process to enforce --max-time."),
            cl::init(0));
 
+  cl::OptionCategory TestCompCat("Options specific to Test-Comp",
+                                 "Options specific to test-comp.");
+
   llvm::cl::opt<bool> WriteXMLTests("write-xml-tests",
                                     llvm::cl::desc("Write XML-formated tests"),
-                                    llvm::cl::init(false));
+                                    llvm::cl::init(false),
+                                    llvm::cl::cat(TestCompCat));
+
+  llvm::cl::opt<std::string> TCOrig("tc-orig",
+                                    llvm::cl::desc("Test-Comp original file"),
+                                    llvm::cl::cat(TestCompCat));
+
+  llvm::cl::opt<std::string>
+      TCHash("tc-hash", llvm::cl::desc("Test-Comp hash sum of original file"),
+             llvm::cl::cat(TestCompCat));
 }
 
 extern cl::opt<std::string> MaxTime;
@@ -1456,9 +1468,8 @@ int main(int argc, char **argv, char **envp) {
 
     // Assume the input file resembles the original source file; just exchange
     // extension
-    *meta_file << "\t<programfile>" << llvm::sys::path::stem(InputFile)
-               << ".c</programfile>\n";
-    *meta_file << "<programhash>EMPTYc</programhash>\n";
+    *meta_file << "\t<programfile>" << TCOrig << ".c</programfile>\n";
+    *meta_file << "\t<programhash>" << TCHash << "</programhash>\n";
     *meta_file << "\t<entryfunction>" << EntryPoint << "</entryfunction>\n";
     *meta_file << "\t<architecture>"
                << loadedModules[0]->getDataLayout().getPointerSizeInBits()
