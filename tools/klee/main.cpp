@@ -590,10 +590,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
 
-    // If there are no symbolic variables return early
-    if (assignments.empty())
-      return;
-
     unsigned test_id = ++m_numTotalTests;
 
     if (success) {
