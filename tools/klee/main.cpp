@@ -545,9 +545,9 @@ void KleeHandler::writeTestCaseXML(
     // Ignore the type
     auto type_size_bytes = item.second.size() * 8;
     llvm::APInt v(type_size_bytes, 0, false);
-    for (auto c : item.second) {
+    for (auto i = item.second.rbegin(), e = item.second.rend(); i != e; ++i) {
       v <<= 8;
-      v |= c;
+      v |= *i;
     }
     // print value
 
