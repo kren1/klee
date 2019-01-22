@@ -99,18 +99,17 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
 
   std::map< ref<Expr>, ref<Expr> > equalities;
   
-  for (ConstraintManager::constraints_ty::const_iterator 
-         it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
-    if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
+  for (auto & constraint: constraints) {
+    if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right,
                                          ee->left));
       } else {
-        equalities.insert(std::make_pair(*it,
+        equalities.insert(std::make_pair(constraint,
                                          ConstantExpr::alloc(1, Expr::Bool)));
       }
     } else {
-      equalities.insert(std::make_pair(*it,
+      equalities.insert(std::make_pair(constraint,
                                        ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
@@ -144,8 +143,8 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
       // (byte-constant comparison).
       BinaryExpr *be = cast<BinaryExpr>(e);
       if (isa<ConstantExpr>(be->left)) {
-	ExprReplaceVisitor visitor(be->right, be->left);
-	rewriteConstraints(visitor);
+        ExprReplaceVisitor visitor(be->right, be->left);
+        rewriteConstraints(visitor);
       }
     }
     constraints.push_back(e);
@@ -161,4 +160,34 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 void ConstraintManager::addConstraint(ref<Expr> e) {
   e = simplifyExpr(e);
   addConstraintInternal(e);
+}
+
+ConstraintManager::ConstraintManager(
+    const std::vector<ref<Expr> >& _constraints) :
+    constraints(_constraints) {
+}
+
+bool ConstraintManager::empty() const {
+  return constraints.empty();
+}
+
+klee::ref<Expr> ConstraintManager::back() const {
+  return constraints.back();
+}
+
+klee::ConstraintManager::constraint_iterator ConstraintManager::begin() const {
+  return constraints.begin();
+}
+
+klee::ConstraintManager::constraint_iterator ConstraintManager::end() const {
+  return constraints.end();
+}
+
+size_t ConstraintManager::size() const {
+  return constraints.size();
+}
+
+bool ConstraintManager::operator ==(
+    const ConstraintManager& other) const {
+  return constraints == other.constraints;
 }

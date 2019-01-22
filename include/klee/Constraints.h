@@ -29,9 +29,7 @@ public:
   ConstraintManager() {}
 
   // create from constraints with no optimization
-  explicit
-  ConstraintManager(const std::vector< ref<Expr> > &_constraints) :
-    constraints(_constraints) {}
+  explicit ConstraintManager(const std::vector<ref<Expr> >& _constraints);
 
   typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
 
@@ -39,25 +37,13 @@ public:
 
   void addConstraint(ref<Expr> e);
   
-  bool empty() const {
-    return constraints.empty();
-  }
-  ref<Expr> back() const {
-    return constraints.back();
-  }
-  constraint_iterator begin() const {
-    return constraints.begin();
-  }
-  constraint_iterator end() const {
-    return constraints.end();
-  }
-  size_t size() const {
-    return constraints.size();
-  }
+  bool empty() const;
+  ref<Expr> back() const;
+  constraint_iterator begin() const;
+  constraint_iterator end() const;
+  size_t size() const;
 
-  bool operator==(const ConstraintManager &other) const {
-    return constraints == other.constraints;
-  }
+  bool operator ==(const ConstraintManager& other) const;
   
 private:
   std::vector< ref<Expr> > constraints;
