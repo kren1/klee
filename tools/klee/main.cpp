@@ -546,25 +546,25 @@ void KleeHandler::writeTestCaseXML(
     auto type_size_bytes = item.second.size() * 8;
     llvm::APInt v(type_size_bytes, 0, false);
     for (auto c : item.second) {
-      v.shl(8);
-      v |= llvm::APInt(type_size_bytes, c, false);
+      v <<= 8;
+      v |= c;
     }
     // print value
 
     // Check if this is an unsigned type
     if (item.first.find("u") == 0) {
       v.print(*file, false);
-    } else if (item.first.rfind("*") > 0) {
+    } else if (item.first.rfind("*") != std::string::npos) {
       // Pointer types
       v.print(*file, false);
     } else if (item.first.find("float") == 0) {
       llvm::APFloat(APFloatBase::IEEEhalf(), v).print(*file);
     } else if (item.first.find("double") == 0) {
       llvm::APFloat(APFloatBase::IEEEdouble(), v).print(*file);
-    } else if (item.first.rfind("_t") > 0) {
+    } else if (item.first.rfind("_t") != std::string::npos) {
       // arbitrary type, e.g. sector_t
       v.print(*file, false);
-    } else if (item.first.find("_") > 0) {
+    } else if (item.first.find("_") == 0) {
       // _Bool
       v.print(*file, false);
     } else {
@@ -574,6 +574,8 @@ void KleeHandler::writeTestCaseXML(
     *file << "</input>\n";
   }
   *file << "</testcase>\n";
+
+  ++m_numGeneratedTests;
 }
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
