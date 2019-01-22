@@ -114,20 +114,19 @@ IndependentElementSet getIndependentConstraints(const Query& query,
   } while (!done);
 
   KLEE_DEBUG(
-    std::set< ref<Expr> > reqset(result.begin(), result.end());
-    llvm::errs() << "--\n";
-    llvm::errs() << "Q: " << query.expr << "\n";
-    llvm::errs() << "\telts: " << IndependentElementSet(query.expr) << "\n";
-    int i = 0;
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-        ie = query.constraints.end(); it != ie; ++it) {
-      llvm::errs() << "C" << i++ << ": " << *it;
-      llvm::errs() << " " << (reqset.count(*it) ? "(required)" : "(independent)") << "\n";
-      llvm::errs() << "\telts: " << IndependentElementSet(*it) << "\n";
-    }
-    llvm::errs() << "elts closure: " << eltsClosure << "\n";
- );
-
+      std::set<ref<Expr>> reqset(result.begin(), result.end());
+      llvm::errs() << "--\n"; llvm::errs() << "Q: " << query.expr << "\n";
+      llvm::errs() << "\telts: " << IndependentElementSet(query.expr) << "\n";
+      int i = 0; for (auto &constraint
+                      : query.constraints) {
+        llvm::errs() << "C" << i++ << ": " << constraint;
+        llvm::errs() << " "
+                     << (reqset.count(constraint) ? "(required)"
+                                                  : "(independent)")
+                     << "\n";
+        llvm::errs() << "\telts: " << IndependentElementSet(constraint) << "\n";
+      } llvm::errs()
+                 << "elts closure: " << eltsClosure << "\n";);
 
   return eltsClosure;
 }
@@ -172,27 +171,24 @@ public:
 bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
   std::vector< ref<Expr> > required;
-  IndependentElementSet eltsClosure =
-    getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  getIndependentConstraints(query, required);
+  ConstraintSet tmp(required);
   return solver->impl->computeValidity(Query(tmp, query.expr), 
                                        result);
 }
 
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
   std::vector< ref<Expr> > required;
-  IndependentElementSet eltsClosure = 
-    getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  getIndependentConstraints(query, required);
+  ConstraintSet tmp(required);
   return solver->impl->computeTruth(Query(tmp, query.expr), 
                                     isValid);
 }
 
 bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   std::vector< ref<Expr> > required;
-  IndependentElementSet eltsClosure = 
-    getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  getIndependentConstraints(query, required);
+  ConstraintSet tmp(required);
   return solver->impl->computeValue(Query(tmp, query.expr), result);
 }
 
@@ -214,9 +210,8 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
   if (retMap.size() > 0)
     assign.bindings.insert(retMap.begin(), retMap.end());
 
-  for(ConstraintManager::constraint_iterator it = query.constraints.begin();
-      it != query.constraints.end(); ++it){
-    ref<Expr> ret = assign.evaluate(*it);
+  for (auto &constraint : query.constraints) {
+    ref<Expr> ret = assign.evaluate(constraint);
 
     assert(isa<ConstantExpr>(ret) && "assignment evaluation did not result in constant");
     ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
@@ -250,7 +245,7 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     if (arraysInFactor.empty())
       continue;
 
-    ConstraintManager tmp(factor.exprs);
+    ConstraintSet tmp(factor.exprs);
     std::vector<std::vector<unsigned char> > tempValues;
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){

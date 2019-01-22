@@ -330,10 +330,8 @@ bool STPSolverImpl::computeInitialValues(
 
   vc_push(vc);
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it)
-    vc_assertFormula(vc, builder->construct(*it));
+  for (const auto &constraint : query.constraints)
+    vc_assertFormula(vc, builder->construct(constraint));
 
   ++stats::queries;
   ++stats::queryCounterexamples;

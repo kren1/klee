@@ -73,13 +73,11 @@ public:
 };
 
 bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
-  ConstraintManager::constraints_ty old;
+  ConstraintSet old;
   bool changed = false;
 
-  constraints.swap(old);
-  for (ConstraintManager::constraints_ty::iterator 
-         it = old.begin(), ie = old.end(); it != ie; ++it) {
-    ref<Expr> &ce = *it;
+  std::swap(constraints, old);
+  for (auto &ce : old) {
     ref<Expr> e = visitor.visit(ce);
 
     if (e!=ce) {
@@ -93,7 +91,8 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
+ref<Expr> ConstraintManager::simplifyExpr(const ConstraintSet &constraints,
+                                          const ref<Expr> &e) {
   if (isa<ConstantExpr>(e))
     return e;
 
@@ -158,36 +157,25 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 }
 
 void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(e);
+  e = simplifyExpr(constraints, e);
   addConstraintInternal(e);
 }
 
-ConstraintManager::ConstraintManager(
-    const std::vector<ref<Expr> >& _constraints) :
-    constraints(_constraints) {
-}
+ConstraintManager::ConstraintManager(ConstraintSet &_constraints)
+    : constraints(_constraints) {}
 
-bool ConstraintManager::empty() const {
-  return constraints.empty();
-}
+bool ConstraintSet::empty() const { return constraints.empty(); }
 
-klee::ref<Expr> ConstraintManager::back() const {
-  return constraints.back();
-}
+klee::ref<Expr> ConstraintSet::back() const { return constraints.back(); }
 
-klee::ConstraintManager::constraint_iterator ConstraintManager::begin() const {
+klee::ConstraintSet::constraint_iterator ConstraintSet::begin() const {
   return constraints.begin();
 }
 
-klee::ConstraintManager::constraint_iterator ConstraintManager::end() const {
+klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
   return constraints.end();
 }
 
-size_t ConstraintManager::size() const {
-  return constraints.size();
-}
+size_t ConstraintSet::size() const { return constraints.size(); }
 
-bool ConstraintManager::operator ==(
-    const ConstraintManager& other) const {
-  return constraints == other.constraints;
-}
+void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e); }

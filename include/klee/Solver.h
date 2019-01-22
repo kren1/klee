@@ -17,36 +17,31 @@
 #include <vector>
 
 namespace klee {
-  class ConstraintManager;
-  class Expr;
-  class SolverImpl;
+class ConstraintSet;
+class Expr;
+class SolverImpl;
 
-  struct Query {
-  public:
-    const ConstraintManager &constraints;
-    ref<Expr> expr;
+struct Query {
+public:
+  const ConstraintSet &constraints;
+  ref<Expr> expr;
 
-    Query(const ConstraintManager& _constraints, ref<Expr> _expr)
-      : constraints(_constraints), expr(_expr) {
-    }
+  Query(const ConstraintSet &_constraints, ref<Expr> _expr)
+      : constraints(_constraints), expr(_expr) {}
 
-    /// withExpr - Return a copy of the query with the given expression.
-    Query withExpr(ref<Expr> _expr) const {
-      return Query(constraints, _expr);
-    }
+  /// withExpr - Return a copy of the query with the given expression.
+  Query withExpr(ref<Expr> _expr) const { return Query(constraints, _expr); }
 
-    /// withFalse - Return a copy of the query with a false expression.
-    Query withFalse() const {
-      return Query(constraints, ConstantExpr::alloc(0, Expr::Bool));
-    }
+  /// withFalse - Return a copy of the query with a false expression.
+  Query withFalse() const {
+    return Query(constraints, ConstantExpr::alloc(0, Expr::Bool));
+  }
 
-    /// negateExpr - Return a copy of the query with the expression negated.
-    Query negateExpr() const {
-      return withExpr(Expr::createIsZero(expr));
-    }
+  /// negateExpr - Return a copy of the query with the expression negated.
+  Query negateExpr() const { return withExpr(Expr::createIsZero(expr)); }
 
-    /// Dump query
-    void dump() const ;
+  /// Dump query
+  void dump() const;
   };
 
   class Solver {

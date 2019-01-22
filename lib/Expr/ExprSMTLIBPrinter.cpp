@@ -501,9 +501,8 @@ void ExprSMTLIBPrinter::printUpdatesAndArray(const UpdateNode *un,
 
 void ExprSMTLIBPrinter::scanAll() {
   // perform scan of all expressions
-  for (ConstraintManager::const_iterator i = query->constraints.begin();
-       i != query->constraints.end(); i++)
-    scan(*i);
+  for (auto &c : query->constraints)
+    scan(c);
 
   // Scan the query too
   scan(query->expr);
@@ -625,10 +624,8 @@ void ExprSMTLIBPrinter::printHumanReadableQuery() {
 
   if (abbrMode != ABBR_LET) {
     // Generate assert statements for each constraint
-    for (ConstraintManager::const_iterator i = query->constraints.begin();
-         i != query->constraints.end(); i++) {
-      printAssert(*i);
-    }
+    for (const auto &c : query->constraints)
+      printAssert(c);
 
     *o << "; QueryExpr\n";
 

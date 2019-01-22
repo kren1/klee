@@ -91,26 +91,25 @@ bool ValidatingSolver::computeInitialValues(
   if (hasSolution) {
     // Assert the bindings as constraints, and verify that the
     // conjunction of the actual constraints is satisfiable.
-    std::vector<ref<Expr> > bindings;
+    ConstraintSet bindingConstraints;
     for (unsigned i = 0; i != values.size(); ++i) {
       const Array *array = objects[i];
       assert(array);
       for (unsigned j = 0; j < array->size; j++) {
         unsigned char value = values[i][j];
-        bindings.push_back(EqExpr::create(
+        bindingConstraints.push_back(EqExpr::create(
             ReadExpr::create(UpdateList(array, 0),
                              ConstantExpr::alloc(j, array->getDomain())),
             ConstantExpr::alloc(value, array->getRange())));
       }
     }
-    ConstraintManager tmp(bindings);
-    ref<Expr> constraints = Expr::createIsZero(query.expr);
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
-         it != ie; ++it)
-      constraints = AndExpr::create(constraints, *it);
 
-    if (!oracle->impl->computeTruth(Query(tmp, constraints), answer))
+    ref<Expr> constraints = Expr::createIsZero(query.expr);
+    for (const auto &constraint : query.constraints)
+      constraints = AndExpr::create(constraints, constraint);
+
+    if (!oracle->impl->computeTruth(Query(bindingConstraints, constraints),
+                                    answer))
       return false;
     if (!answer)
       assert(0 && "invalid solver result (computeInitialValues)");
