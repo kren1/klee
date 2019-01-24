@@ -259,6 +259,34 @@ namespace {
 		  cl::ZeroOrMore,
                   cl::cat(TerminationCat));
 
+  cl::list<Executor::TerminateReason> DumpTestCaseCategory(
+      "dump-test-case-type",
+      cl::desc("Only dump test cases of the specified type (default=all)"),
+      cl::values(clEnumValN(Executor::Abort, "Abort", "The program crashed"),
+                 clEnumValN(Executor::Assert, "Assert", "An assertion was hit"),
+                 clEnumValN(Executor::BadVectorAccess, "BadVectorAccess",
+                            "Vector accessed out of bounds"),
+                 clEnumValN(Executor::Exec, "Exec",
+                            "Trying to execute an unexpected instruction"),
+                 clEnumValN(Executor::External, "External",
+                            "External objects referenced"),
+                 clEnumValN(Executor::Free, "Free", "Freeing invalid memory"),
+                 clEnumValN(Executor::Model, "Model", "Memory model limit hit"),
+                 clEnumValN(Executor::Overflow, "Overflow",
+                            "An overflow occurred"),
+                 clEnumValN(Executor::Ptr, "Ptr", "Pointer error"),
+                 clEnumValN(Executor::ReadOnly, "ReadOnly",
+                            "Write to read-only memory"),
+                 clEnumValN(Executor::ReportError, "ReportError",
+                            "klee_report_error called"),
+                 clEnumValN(Executor::User, "User",
+                            "Wrong klee_* functions invocation"),
+                 clEnumValN(Executor::Unhandled, "Unhandled",
+                            "Unhandled instruction hit"),
+                 clEnumValN(Executor::All, "All", "Dump all error test cases")
+                     KLEE_LLVM_CL_VAL_END),
+      cl::ZeroOrMore, cl::cat(TerminationCat));
+
   cl::opt<unsigned long long>
   MaxInstructions("max-instructions",
                   cl::desc("Stop execution after this many instructions (default=0 (off))"),
@@ -3129,6 +3157,21 @@ bool Executor::shouldExitOn(enum TerminateReason termReason) {
   return false;
 }
 
+bool shouldDumpTestCase(enum Executor::TerminateReason termReason) {
+  if (termReason == Executor::TerminateReason::All)
+    return true;
+
+  // Nothing was provided, we assume all tests should be dumped
+  if (DumpTestCaseCategory.empty())
+    return true;
+
+  for (const auto &reason : DumpTestCaseCategory)
+    if (termReason == reason)
+      return true;
+
+  return false;
+}
+
 void Executor::terminateStateOnError(ExecutionState &state,
                                      const llvm::Twine &messaget,
                                      enum TerminateReason termReason,
@@ -3149,29 +3192,31 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (!EmitAllErrors)
       klee_message("NOTE: now ignoring this error at this location");
 
-    std::string MsgString;
-    llvm::raw_string_ostream msg(MsgString);
-    msg << "Error: " << message << "\n";
-    if (ii.file != "") {
-      msg << "File: " << ii.file << "\n";
-      msg << "Line: " << ii.line << "\n";
-      msg << "assembly.ll line: " << ii.assemblyLine << "\n";
+    if (shouldDumpTestCase(termReason)) {
+      std::string MsgString;
+      llvm::raw_string_ostream msg(MsgString);
+      msg << "Error: " << message << "\n";
+      if (ii.file != "") {
+        msg << "File: " << ii.file << "\n";
+        msg << "Line: " << ii.line << "\n";
+        msg << "assembly.ll line: " << ii.assemblyLine << "\n";
+      }
+      msg << "Stack: \n";
+      state.dumpStack(msg);
+
+      std::string info_str = info.str();
+      if (info_str != "")
+        msg << "Info: \n" << info_str;
+
+      std::string suffix_buf;
+      if (!suffix) {
+        suffix_buf = TerminateReasonNames[termReason];
+        suffix_buf += ".err";
+        suffix = suffix_buf.c_str();
+      }
+
+      interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
     }
-    msg << "Stack: \n";
-    state.dumpStack(msg);
-
-    std::string info_str = info.str();
-    if (info_str != "")
-      msg << "Info: \n" << info_str;
-
-    std::string suffix_buf;
-    if (!suffix) {
-      suffix_buf = TerminateReasonNames[termReason];
-      suffix_buf += ".err";
-      suffix = suffix_buf.c_str();
-    }
-
-    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
   terminateState(state);
