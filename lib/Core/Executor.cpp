@@ -282,6 +282,11 @@ namespace {
             cl::init(2000),
             cl::cat(TerminationCat));
 
+  cl::opt<unsigned> MemoryEveryNInstructions(
+      "check-memory-every-n-instructions",
+      cl::desc("Check memory every (instruction & count)"), cl::init(0xFFFF),
+      cl::cat(TerminationCat));
+
   cl::opt<bool>
   MaxMemoryInhibit("max-memory-inhibit",
                    cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
@@ -2806,7 +2811,7 @@ void Executor::bindModuleConstants() {
 void Executor::checkMemoryUsage() {
   if (!MaxMemory)
     return;
-  if ((stats::instructions & 0xFFFF) == 0) {
+  if ((stats::instructions & MemoryEveryNInstructions) == 0) {
     // We need to avoid calling GetTotalMallocUsage() often because it
     // is O(elts on freelist). This is really bad since we start
     // to pummel the freelist once we hit the memory cap.
