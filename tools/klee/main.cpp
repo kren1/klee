@@ -215,10 +215,6 @@ namespace {
   WarnAllExternals("warn-all-externals",
                    cl::desc("Give initial warning for all externals (default=false)."));
 
-  cl::opt<bool>
-  OptExitOnError("exit-on-error",
-              cl::desc("Exit KLEE if an error in the tested application has been found (default=false)."));
-
 
   /*** Replaying options ***/
   
@@ -285,6 +281,15 @@ namespace {
   llvm::cl::opt<std::string> TCOrig("tc-orig",
                                     llvm::cl::desc("Test-Comp original file"),
                                     llvm::cl::cat(TestCompCat));
+
+  enum class TestCompType { BugFinding, Coverage };
+
+  cl::opt<TestCompType> TCType(
+      "tc-type", cl::desc("Type of test"),
+      cl::values(clEnumValN(TestCompType::BugFinding, "bug", "Bug Finding"),
+                 clEnumValN(TestCompType::Coverage, "cov", "Coverage")
+                     KLEE_LLVM_CL_VAL_END),
+      cl::init(TestCompType::BugFinding));
 
   llvm::cl::opt<std::string>
       TCHash("tc-hash", llvm::cl::desc("Test-Comp hash sum of original file"),
@@ -677,11 +682,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       if (f)
         *f << "Time to generate test case: " << elapsed_time << '\n';
     }
-  }
-
-  if (errorMessage && OptExitOnError) {
-    m_interpreter->prepareForEarlyExit();
-    klee_error("EXITING ON ERROR:\n%s\n", errorMessage);
   }
 }
 
@@ -1457,7 +1457,7 @@ int main(int argc, char **argv, char **envp) {
     *meta_file << "\t<producer>" << PACKAGE_STRING << "</producer>\n";
 
     // Assume with early exit a bug finding mode and otherwise coverage
-    if (OptExitOnError)
+    if (TCType == TestCompType::BugFinding)
       *meta_file << "\t<specification>COVER( init(main()), FQL(COVER "
                     "EDGES(@CALL(__VERIFIER_error))) )</specification>\n";
     else

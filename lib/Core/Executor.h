@@ -115,7 +115,8 @@ public:
     ReadOnly,
     ReportError,
     User,
-    Unhandled
+    Unhandled,
+    All
   };
 
 private:
@@ -520,8 +521,6 @@ public:
   void setHaltExecution(bool value) override { haltExecution = value; }
 
   void setInhibitForking(bool value) override { inhibitForking = value; }
-
-  void prepareForEarlyExit() override;
 
   /*** State accessor methods ***/
 

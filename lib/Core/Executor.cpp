@@ -253,7 +253,8 @@ namespace {
 		    clEnumValN(Executor::ReadOnly, "ReadOnly", "Write to read-only memory"),
 		    clEnumValN(Executor::ReportError, "ReportError", "klee_report_error called"),
 		    clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
-		    clEnumValN(Executor::Unhandled, "Unhandled", "Unhandled instruction hit")
+		    clEnumValN(Executor::Unhandled, "Unhandled", "Unhandled instruction hit"),
+        clEnumValN(Executor::All, "All", "Terminate on any error")
 		    KLEE_LLVM_CL_VAL_END),
 		  cl::ZeroOrMore,
                   cl::cat(TerminationCat));
@@ -3118,11 +3119,11 @@ const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const Execut
 }
 
 bool Executor::shouldExitOn(enum TerminateReason termReason) {
-  std::vector<TerminateReason>::iterator s = ExitOnErrorType.begin();
-  std::vector<TerminateReason>::iterator e = ExitOnErrorType.end();
+  if (termReason == TerminateReason::All)
+    return true;
 
-  for (; s != e; ++s)
-    if (termReason == *s)
+  for (const auto &reason : ExitOnErrorType)
+    if (termReason == reason)
       return true;
 
   return false;
@@ -4055,13 +4056,6 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
   assert(bits64::isPowerOfTwo(alignment) &&
          "Returned alignment must be a power of two");
   return alignment;
-}
-
-void Executor::prepareForEarlyExit() {
-  if (statsTracker) {
-    // Make sure stats get flushed out
-    statsTracker->done();
-  }
 }
 
 /// Returns the errno location in memory
