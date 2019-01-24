@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --libc=uclibc %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error-type=All --libc=uclibc %t1.bc
 
 // just make sure atexit works ok
 

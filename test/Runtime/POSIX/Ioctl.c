@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t.bc --sym-stdin 4
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error-type=All %t.bc --sym-stdin 4
 
 #include <assert.h>
 #include <sys/stat.h>

@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --posix-runtime %t.bc --sym-files 1 8 >%t.log
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error-type=All --posix-runtime %t.bc --sym-files 1 8 >%t.log
 
 #include <unistd.h>
 #include <sys/types.h>

@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=klee --exit-on-error %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --exit-on-error-type=All %t1.bc
 
 #include <arpa/inet.h>
 #include <assert.h>

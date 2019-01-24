@@ -3,7 +3,7 @@
 //
 // RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error-type=All %t1.bc
 // RUN: FileCheck < %t.klee-out/run.istats %s
 
 // CHECK: positions: instr line

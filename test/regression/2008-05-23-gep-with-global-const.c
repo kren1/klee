@@ -1,6 +1,6 @@
 // RUN: %llvmgcc -emit-llvm %O0opt -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t.bc
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error-type=All %t.bc
 
 #include <assert.h>
 
