@@ -48,11 +48,17 @@ include(CheckLibraryExists)
 ###############################################################################
 # Project version
 ###############################################################################
-set(KLEE_VERSION_MAJOR 1)
-set(KLEE_VERSION_MINOR 4)
+set(KLEE_VERSION_MAJOR 2)
+set(KLEE_VERSION_MINOR 0)
 set(KLEE_VERSION_PATCH 0)
-set(KLEE_VERSION_TWEAK 0)
-set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}.${KLEE_VERSION_PATCH}.${KLEE_VERSION_TWEAK}")
+set(KLEE_VERSION_LABEL "pre-test-comp")
+set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}.${KLEE_VERSION_PATCH}")
+
+if ( "" STREQUAL "${KLEE_VERSION_LABEL}")
+else()
+  set(KLEE_VERSION "${KLEE_VERSION}-${KLEE_VERSION_LABEL}")
+endif()
+
 message(STATUS "KLEE version ${KLEE_VERSION}")
 set(PACKAGE_STRING "\"KLEE ${KLEE_VERSION}\"")
 set(PACKAGE_URL "\"https://klee.github.io\"")
