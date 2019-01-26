@@ -616,7 +616,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
   }
 
-  if (errorMessage || WriteKQueries) {
+  if (WriteKQueries) {
     std::string constraints;
     m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
     auto f = openTestFile("kquery", test_id);
