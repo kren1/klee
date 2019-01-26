@@ -205,12 +205,6 @@ namespace {
                  cl::init(true),
                  cl::cat(ChecksCat));
 
- 
-
-  cl::opt<bool>
-  NoOutput("no-output",
-           cl::desc("Don't generate test files (default=false)."));
-
   cl::opt<bool>
   WarnAllExternals("warn-all-externals",
                    cl::desc("Give initial warning for all externals (default=false)."));
@@ -582,106 +576,102 @@ void KleeHandler::writeTestCaseXML(
 
   ++m_numGeneratedTests;
 }
+
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
-  if (!NoOutput) {
-    const auto start_time = time::getWallTime();
+  unsigned test_id = ++m_numTotalTests;
+  if (m_numGeneratedTests == MaxTests)
+    m_interpreter->setHaltExecution(true);
 
-    std::vector<std::pair<std::string, std::vector<unsigned char>>> assignments;
-    bool success = m_interpreter->getSymbolicSolution(state, assignments);
+  const auto start_time = time::getWallTime();
 
-    if (!success)
-      klee_warning("unable to get symbolic solution, losing test case");
+  std::vector<std::pair<std::string, std::vector<unsigned char>>> assignments;
+  bool success = m_interpreter->getSymbolicSolution(state, assignments);
 
-    unsigned test_id = ++m_numTotalTests;
+  if (success) {
+    if (!WriteXMLTests)
+      writeTestCaseKTest(assignments, test_id);
+    else
+      writeTestCaseXML(errorMessage != nullptr, assignments, test_id);
+  } else
+    klee_warning("unable to get symbolic solution, losing test case");
 
-    if (success) {
-      if (!WriteXMLTests)
-        writeTestCaseKTest(assignments, test_id);
-      else
-        writeTestCaseXML(errorMessage != nullptr, assignments, test_id);
+  if (errorMessage) {
+    auto f = openTestFile(errorSuffix, test_id);
+    if (f)
+      *f << errorMessage;
+  }
+
+  if (m_pathWriter) {
+    std::vector<unsigned char> concreteBranches;
+    m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
+                             concreteBranches);
+    auto f = openTestFile("path", test_id);
+    if (f) {
+      for (const auto &branch : concreteBranches) {
+        *f << branch << '\n';
+      }
     }
+  }
 
-    if (errorMessage) {
-      auto f = openTestFile(errorSuffix, test_id);
-      if (f)
-        *f << errorMessage;
+  if (errorMessage || WriteKQueries) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
+    auto f = openTestFile("kquery", test_id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteCVCs) {
+    // FIXME: If using Z3 as the core solver the emitted file is actually
+    // SMT-LIBv2 not CVC which is a bit confusing
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
+    auto f = openTestFile("cvc", test_id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteSMT2s) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
+    auto f = openTestFile("smt2", test_id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (m_symPathWriter) {
+    std::vector<unsigned char> symbolicBranches;
+    m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
+                                symbolicBranches);
+    auto f = openTestFile("sym.path", test_id);
+    if (f) {
+      for (const auto &branch : symbolicBranches) {
+        *f << branch << '\n';
+      }
     }
+  }
 
-    if (m_pathWriter) {
-      std::vector<unsigned char> concreteBranches;
-      m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
-                               concreteBranches);
-      auto f = openTestFile("path", test_id);
-      if (f) {
-        for (const auto &branch : concreteBranches) {
-          *f << branch << '\n';
+  if (WriteCov) {
+    std::map<const std::string *, std::set<unsigned>> cov;
+    m_interpreter->getCoveredLines(state, cov);
+    auto f = openTestFile("cov", test_id);
+    if (f) {
+      for (const auto &entry : cov) {
+        for (const auto &line : entry.second) {
+          *f << *entry.first << ':' << line << '\n';
         }
       }
     }
+  }
 
-    if (errorMessage || WriteKQueries) {
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      auto f = openTestFile("kquery", test_id);
-      if (f)
-        *f << constraints;
-    }
-
-    if (WriteCVCs) {
-      // FIXME: If using Z3 as the core solver the emitted file is actually
-      // SMT-LIBv2 not CVC which is a bit confusing
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      auto f = openTestFile("cvc", test_id);
-      if (f)
-        *f << constraints;
-    }
-
-    if(WriteSMT2s) {
-      std::string constraints;
-        m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        auto f = openTestFile("smt2", test_id);
-        if (f)
-          *f << constraints;
-    }
-
-    if (m_symPathWriter) {
-      std::vector<unsigned char> symbolicBranches;
-      m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
-                                  symbolicBranches);
-      auto f = openTestFile("sym.path", test_id);
-      if (f) {
-        for (const auto &branch : symbolicBranches) {
-          *f << branch << '\n';
-        }
-      }
-    }
-
-    if (WriteCov) {
-      std::map<const std::string*, std::set<unsigned> > cov;
-      m_interpreter->getCoveredLines(state, cov);
-      auto f = openTestFile("cov", test_id);
-      if (f) {
-        for (const auto &entry : cov) {
-          for (const auto &line : entry.second) {
-            *f << *entry.first << ':' << line << '\n';
-          }
-        }
-      }
-    }
-
-    if (m_numGeneratedTests == MaxTests)
-      m_interpreter->setHaltExecution(true);
-
-    if (WriteTestInfo) {
-      time::Span elapsed_time(time::getWallTime() - start_time);
-      auto f = openTestFile("info", test_id);
-      if (f)
-        *f << "Time to generate test case: " << elapsed_time << '\n';
-    }
+  if (WriteTestInfo) {
+    time::Span elapsed_time(time::getWallTime() - start_time);
+    auto f = openTestFile("info", test_id);
+    if (f)
+      *f << "Time to generate test case: " << elapsed_time << '\n';
   }
 }
 
