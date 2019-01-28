@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --const-array-opt --max-time=10 --only-output-states-covering-new %t.bc >%t.log
+// RUN: %klee --output-dir=%t.klee-out --const-array-opt --max-time=10 --output-states-covering-new %t.bc >%t.log
 // grep -q "Finished successfully!\n"
 
 /* This is testing the const array optimization.  On my 2.3GHz machine

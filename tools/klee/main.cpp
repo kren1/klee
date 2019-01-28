@@ -582,8 +582,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
   unsigned test_id = ++m_numTotalTests;
-  if (m_numGeneratedTests == MaxTests)
-    m_interpreter->setHaltExecution(true);
 
   const auto start_time = time::getWallTime();
 
@@ -597,6 +595,9 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       writeTestCaseXML(errorMessage != nullptr, assignments, test_id);
   } else
     klee_warning("unable to get symbolic solution, losing test case");
+
+  if (m_numGeneratedTests == MaxTests)
+    m_interpreter->setHaltExecution(true);
 
   if (errorMessage) {
     auto f = openTestFile(errorSuffix, test_id);

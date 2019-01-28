@@ -440,6 +440,10 @@ private:
                              const char *suffix = NULL,
                              const llvm::Twine &longMessage = "");
 
+  /// Check if test-case should be dumped for the provided state
+  /// @return true is state should be dumped, false otherwise
+  bool checkIfStateDump(ExecutionState &state);
+
   // call error handler and terminate state, for execution errors
   // (things that should not be possible, like illegal instruction or
   // unlowered instrinsic, or are unsupported, like inline assembly)

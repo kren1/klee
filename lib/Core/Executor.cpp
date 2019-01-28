@@ -108,14 +108,14 @@ namespace {
                    cl::cat(TestGenCat));
 
   cl::opt<bool>
-  OnlyOutputStatesCoveringNew("only-output-states-covering-new",
+  DumpStatesCoveringNew("output-states-covering-new",
                               cl::init(false),
-			      cl::desc("Only output test cases covering new code (default=off)."),
+			      cl::desc("Output test cases covering new code (default=off)."),
                               cl::cat(TestGenCat));
 
-  cl::opt<bool> NoCoverageStates(
-      "no-coverage-tests", cl::init(false),
-      cl::desc("Do not generate tests for coverage (default=off)."),
+  cl::opt<bool> DumpAllStates(
+      "dump-all-states", cl::init(true),
+      cl::desc("Generate testcase for every state (default=on)."),
       cl::cat(TestGenCat));
 
   cl::opt<bool>
@@ -468,7 +468,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   initializeSearchOptions();
 
-  if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
+  if (DumpStatesCoveringNew && !StatsTracker::useIStats())
     klee_error("To use --only-output-states-covering-new, you need to enable --output-istats.");
 
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
@@ -3085,21 +3085,35 @@ void Executor::terminateState(ExecutionState &state) {
   }
 }
 
+bool Executor::checkIfStateDump(ExecutionState &state) {
+  // Dump every state as test-case on termination
+  if (DumpAllStates)
+    return true;
+
+  // Dump the state if it covers something new
+  if (DumpStatesCoveringNew && state.coveredNew)
+    return true;
+
+  // Dump the state if it is a seed state
+  if (AlwaysOutputSeeds && seedMap.count(&state))
+    return true;
+
+  return false;
+}
+
+
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
-  if ((!NoCoverageStates &&
-       (!OnlyOutputStatesCoveringNew || state.coveredNew)) ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (checkIfStateDump(state))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
   terminateState(state);
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
-  if ((!NoCoverageStates &&
-	(!OnlyOutputStatesCoveringNew || state.coveredNew)) || 
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (checkIfStateDump(state))
     interpreterHandler->processTestCase(state, 0, 0);
+
   terminateState(state);
 }
 
@@ -3177,6 +3191,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      enum TerminateReason termReason,
                                      const char *suffix,
                                      const llvm::Twine &info) {
+  bool dumpTestCase = false;
+
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   Instruction * lastInst;
@@ -3192,33 +3208,36 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (!EmitAllErrors)
       klee_message("NOTE: now ignoring this error at this location");
 
-    if (shouldDumpTestCase(termReason)) {
-      std::string MsgString;
-      llvm::raw_string_ostream msg(MsgString);
-      msg << "Error: " << message << "\n";
-      if (ii.file != "") {
-        msg << "File: " << ii.file << "\n";
-        msg << "Line: " << ii.line << "\n";
-        msg << "assembly.ll line: " << ii.assemblyLine << "\n";
-      }
-      msg << "Stack: \n";
-      state.dumpStack(msg);
-
-      std::string info_str = info.str();
-      if (info_str != "")
-        msg << "Info: \n" << info_str;
-
-      std::string suffix_buf;
-      if (!suffix) {
-        suffix_buf = TerminateReasonNames[termReason];
-        suffix_buf += ".err";
-        suffix = suffix_buf.c_str();
-      }
-
-      interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
-    }
+    if (shouldDumpTestCase(termReason))
+      dumpTestCase = true;
   }
-    
+
+  if (dumpTestCase || checkIfStateDump(state)) {
+    std::string MsgString;
+    llvm::raw_string_ostream msg(MsgString);
+    msg << "Error: " << message << "\n";
+    if (ii.file != "") {
+      msg << "File: " << ii.file << "\n";
+      msg << "Line: " << ii.line << "\n";
+      msg << "assembly.ll line: " << ii.assemblyLine << "\n";
+    }
+    msg << "Stack: \n";
+    state.dumpStack(msg);
+
+    std::string info_str = info.str();
+    if (info_str != "")
+      msg << "Info: \n" << info_str;
+
+    std::string suffix_buf;
+    if (!suffix) {
+      suffix_buf = TerminateReasonNames[termReason];
+      suffix_buf += ".err";
+      suffix = suffix_buf.c_str();
+    }
+
+    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
+  }
+
   terminateState(state);
 
   if (shouldExitOn(termReason))
