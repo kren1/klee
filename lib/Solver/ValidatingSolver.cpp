@@ -91,7 +91,7 @@ bool ValidatingSolver::computeInitialValues(
   if (hasSolution) {
     // Assert the bindings as constraints, and verify that the
     // conjunction of the actual constraints is satisfiable.
-    ConstraintSet bindingConstraints;
+    SimpleConstraintSet bindingConstraints;
     for (unsigned i = 0; i != values.size(); ++i) {
       const Array *array = objects[i];
       assert(array);

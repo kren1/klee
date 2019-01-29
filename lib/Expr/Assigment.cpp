@@ -23,8 +23,8 @@ void Assignment::dump() {
   }
 }
 
-ConstraintSet Assignment::createConstraintsFromAssignment() const {
-  ConstraintSet result;
+SimpleConstraintSet Assignment::createConstraintsFromAssignment() const {
+  SimpleConstraintSet result;
   for (const auto &binding : bindings) {
     const auto &array = binding.first;
     const auto &values = binding.second;

@@ -47,7 +47,7 @@ namespace klee {
     
     ref<Expr> evaluate(const Array *mo, unsigned index) const;
     ref<Expr> evaluate(ref<Expr> e);
-    ConstraintSet createConstraintsFromAssignment() const;
+    SimpleConstraintSet createConstraintsFromAssignment() const;
 
     template<typename InputIterator>
     bool satisfies(InputIterator begin, InputIterator end);

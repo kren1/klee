@@ -92,7 +92,7 @@ public:
   AddressSpace addressSpace;
 
   /// @brief Constraints collected so far
-  ConstraintSet constraints;
+  SimpleConstraintSet constraints;
 
   /// Statistics and information
 

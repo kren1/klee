@@ -1634,9 +1634,9 @@ void QueryCommand::dump() {
     ObjectsBegin = &Objects[0];
     ObjectsEnd = ObjectsBegin + Objects.size();
   }
-  ExprPPrinter::printQuery(llvm::outs(), ConstraintSet(Constraints), Query,
-                           ValuesBegin, ValuesEnd, ObjectsBegin, ObjectsEnd,
-                           false);
+  ExprPPrinter::printQuery(llvm::outs(), SimpleConstraintSet(Constraints),
+                           Query, ValuesBegin, ValuesEnd, ObjectsBegin,
+                           ObjectsEnd, false);
 }
 
 // Public parser API

@@ -172,7 +172,7 @@ bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
   std::vector< ref<Expr> > required;
   getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  SimpleConstraintSet tmp(required);
   return solver->impl->computeValidity(Query(tmp, query.expr), 
                                        result);
 }
@@ -180,7 +180,7 @@ bool IndependentSolver::computeValidity(const Query& query,
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
   std::vector< ref<Expr> > required;
   getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  SimpleConstraintSet tmp(required);
   return solver->impl->computeTruth(Query(tmp, query.expr), 
                                     isValid);
 }
@@ -188,7 +188,7 @@ bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
 bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   std::vector< ref<Expr> > required;
   getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  SimpleConstraintSet tmp(required);
   return solver->impl->computeValue(Query(tmp, query.expr), result);
 }
 
@@ -245,7 +245,7 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     if (arraysInFactor.empty())
       continue;
 
-    ConstraintSet tmp(factor.exprs);
+    SimpleConstraintSet tmp(factor.exprs);
     std::vector<std::vector<unsigned char> > tempValues;
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){

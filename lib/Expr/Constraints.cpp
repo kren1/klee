@@ -73,7 +73,7 @@ public:
 };
 
 bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
-  ConstraintSet old;
+  SimpleConstraintSet old;
   bool changed = false;
 
   std::swap(constraints, old);
@@ -161,21 +161,20 @@ void ConstraintManager::addConstraint(ref<Expr> e) {
   addConstraintInternal(e);
 }
 
-ConstraintManager::ConstraintManager(ConstraintSet &_constraints)
+ConstraintManager::ConstraintManager(SimpleConstraintSet &_constraints)
     : constraints(_constraints) {}
 
-bool ConstraintSet::empty() const { return constraints.empty(); }
-
-klee::ref<Expr> ConstraintSet::back() const { return constraints.back(); }
-
-klee::ConstraintSet::constraint_iterator ConstraintSet::begin() const {
-  return constraints.begin();
-}
-
-klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
-  return constraints.end();
-}
-
-size_t ConstraintSet::size() const { return constraints.size(); }
-
-void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e); }
+// bool ConstraintSet::empty() const { return constraints.empty(); }
+//
+// klee::ConstraintSet::constraint_iterator ConstraintSet::begin() const {
+//  return constraints.begin();
+//}
+//
+// klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
+//  return constraints.end();
+//}
+//
+// size_t ConstraintSet::size() const { return constraints.size(); }
+//
+// void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e);
+// }

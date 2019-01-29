@@ -523,7 +523,7 @@ void ExprPPrinter::printQuery(
   }
   PC << ']';
 
-  p.printSeparator(PC, constraints.empty(), indent-1);
+  p.printSeparator(PC, constraints.begin() == constraints.end(), indent - 1);
   p.print(q, PC);
 
   // Print expressions to obtain values for, if any.

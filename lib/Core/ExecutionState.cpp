@@ -314,7 +314,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     }
   }
 
-  constraints = ConstraintSet();
+  constraints = SimpleConstraintSet();
 
   ConstraintManager m(constraints);
   for (const auto &constraint : commonConstraints)

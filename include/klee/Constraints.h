@@ -25,24 +25,72 @@ public:
   typedef constraints_ty::const_iterator const_iterator;
   typedef const_iterator constraint_iterator;
 
-  bool empty() const;
-  ref<Expr> back() const;
-  constraint_iterator begin() const;
-  constraint_iterator end() const;
-  size_t size() const;
+  virtual constraint_iterator begin() const = 0;
+  virtual constraint_iterator end() const = 0;
+  //  size_t size() const;
 
-  ConstraintSet(constraints_ty cs) : constraints(cs) {}
   ConstraintSet() = default;
 
-  void push_back(const ref<Expr> &e);
+  virtual ~ConstraintSet() = default;
+};
 
-  bool operator==(const ConstraintSet &b) const {
+class SimpleConstraintSet : public ConstraintSet {
+public:
+  virtual constraint_iterator begin() const { return constraints.begin(); }
+  virtual constraint_iterator end() const { return constraints.end(); }
+
+  bool operator==(const SimpleConstraintSet &b) const {
     return constraints == b.constraints;
   }
 
-private:
+  void push_back(const ref<Expr> &e) { constraints.push_back(e); }
+
+  SimpleConstraintSet(constraints_ty cs) : constraints(cs) {}
+
+  SimpleConstraintSet() = default;
+
+protected:
   constraints_ty constraints;
 };
+
+class OrderedConstraintSet : public ConstraintSet {
+public:
+  virtual constraint_iterator begin() const { return constraints.begin(); }
+  virtual constraint_iterator end() const { return constraints.end(); }
+
+  bool operator==(const OrderedConstraintSet &b) const {
+    return constraints == b.constraints;
+  }
+
+  OrderedConstraintSet(constraints_ty cs) : constraints(cs) {
+    std::sort(constraints.begin(), constraints.end(), cmp);
+  }
+
+  OrderedConstraintSet() = default;
+
+protected:
+  void push_back(const ref<Expr> &item) {
+    // Search for the correct position
+    auto position =
+        std::upper_bound(constraints.begin(), constraints.end(), item, cmp);
+    constraints.insert(position, item);
+  }
+
+  /// Comparator for two expressions.
+  ///
+  /// @param a expression
+  /// @param b expression
+  /// @return true if expression a is semantically ordered before b, otherwise
+  /// false
+  static bool cmp(const ref<Expr> &a, const ref<Expr> &b) { return *a < *b; }
+
+  constraints_ty constraints;
+};
+
+// IndepConstraintSet : public ConstraintSet {
+//
+//
+//};
 
 class ExprVisitor;
 
@@ -50,20 +98,20 @@ class ExprVisitor;
 class ConstraintManager {
 public:
   // create from constraints with no optimization
-  explicit ConstraintManager(ConstraintSet &constraints);
+  explicit ConstraintManager(SimpleConstraintSet &constraints);
 
   static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
                                 const ref<Expr> &e);
 
   void addConstraint(ref<Expr> e);
 
+private:
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);
 
   void addConstraintInternal(ref<Expr> e);
 
-private:
-  ConstraintSet &constraints;
+  SimpleConstraintSet &constraints;
 };
 
 }

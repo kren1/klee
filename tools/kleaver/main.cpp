@@ -238,8 +238,9 @@ static bool EvaluateInputAST(const char *Filename,
       assert("FIXME: Support counterexample query commands!");
       if (QC->Values.empty() && QC->Objects.empty()) {
         bool result;
-        if (S->mustBeTrue(Query(ConstraintSet(QC->Constraints), QC->Query),
-                          result)) {
+        if (S->mustBeTrue(
+                Query(SimpleConstraintSet(QC->Constraints), QC->Query),
+                result)) {
           llvm::outs() << (result ? "VALID" : "INVALID");
         } else {
           llvm::outs() << "FAIL (reason: "
@@ -254,8 +255,9 @@ static bool EvaluateInputAST(const char *Filename,
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
         ref<ConstantExpr> result;
-        if (S->getValue(Query(ConstraintSet(QC->Constraints), QC->Values[0]),
-                        result)) {
+        if (S->getValue(
+                Query(SimpleConstraintSet(QC->Constraints), QC->Values[0]),
+                result)) {
           llvm::outs() << "INVALID\n";
           llvm::outs() << "\tExpr 0:\t" << result;
         } else {
@@ -267,8 +269,8 @@ static bool EvaluateInputAST(const char *Filename,
         std::vector< std::vector<unsigned char> > result;
 
         if (S->getInitialValues(
-                Query(ConstraintSet(QC->Constraints), QC->Query), QC->Objects,
-                result)) {
+                Query(SimpleConstraintSet(QC->Constraints), QC->Query),
+                QC->Objects, result)) {
           llvm::outs() << "INVALID\n";
 
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
@@ -374,7 +376,7 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 			 * constraint in the constraint set is set to NULL and
 			 * will later cause a NULL pointer dereference.
 			 */
-                        ConstraintSet constraintM(QC->Constraints);
+                        SimpleConstraintSet constraintM(QC->Constraints);
                         Query query(constraintM,QC->Query);
 			printer.setQuery(query);
 

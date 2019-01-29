@@ -79,7 +79,7 @@ void testOperation(Solver &solver,
     ref<Expr> queryExpr = EqExpr::create(fullySymbolicExpr, 
                                          partiallyConstantExpr);
 
-    ConstraintSet constraints;
+    SimpleConstraintSet constraints;
     ConstraintManager cm(constraints);
     cm.addConstraint(expr);
     bool res;
