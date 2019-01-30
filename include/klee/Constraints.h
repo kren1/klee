@@ -20,7 +20,7 @@ class ConstraintSet {
   friend class ConstraintManager;
 
 public:
-  typedef std::vector< ref<Expr> > constraints_ty;
+  using constraints_ty = std::vector<ref<Expr>>;
   typedef constraints_ty::iterator iterator;
   typedef constraints_ty::const_iterator const_iterator;
   typedef const_iterator constraint_iterator;
@@ -91,9 +91,11 @@ protected:
   constraints_ty constraints;
 };
 
-// IndepConstraintSet : public ConstraintSet {
-//
-//
+///// Manages constraints in sets of independent constraints
+/////
+// class IndepConstraintSet {
+// public:
+//  std::vector<IndependentElementSet> idep_constraints;
 //};
 
 class ExprVisitor;

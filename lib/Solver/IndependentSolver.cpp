@@ -18,7 +18,7 @@
 #include "klee/util/ExprUtil.h"
 #include "klee/util/Assignment.h"
 
-#include "../Expr/IndependentElementSet.h"
+#include "klee/IndependentElementSet.h"
 
 #include "llvm/Support/raw_ostream.h"
 #include <list>
