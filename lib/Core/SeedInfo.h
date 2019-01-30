@@ -40,8 +40,7 @@ namespace klee {
     
     /// Patch the seed so that condition is satisfied while retaining as
     /// many of the seed values as possible.
-    void patchSeed(const ExecutionState &state, 
-                   ref<Expr> condition,
+    void patchSeed(ExecutionState &state, ref<Expr> condition,
                    TimingSolver *solver);
   };
 }

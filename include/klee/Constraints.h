@@ -46,6 +46,10 @@ public:
   void push_back(const ref<Expr> &e) { constraints.push_back(e); }
 
   SimpleConstraintSet(constraints_ty cs) : constraints(cs) {}
+  SimpleConstraintSet(const ConstraintSet &cs) {
+    for (auto &c : cs)
+      constraints.push_back(c);
+  }
 
   SimpleConstraintSet() = default;
 

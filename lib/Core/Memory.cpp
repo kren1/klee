@@ -10,11 +10,12 @@
 #include "Memory.h"
 
 #include "Context.h"
+#include "klee/ExecutionState.h"
 #include "klee/Expr.h"
-#include "klee/Solver.h"
-#include "klee/util/BitArray.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Solver.h"
 #include "klee/util/ArrayCache.h"
+#include "klee/util/BitArray.h"
 
 #include "MemoryManager.h"
 
@@ -190,11 +191,12 @@ const UpdateList &ObjectState::getUpdates() const {
 }
 
 void ObjectState::flushToConcreteStore(TimingSolver *solver,
-                                       const ExecutionState &state) const {
+                                       ExecutionState &state) const {
   for (unsigned i = 0; i < size; i++) {
     if (isByteKnownSymbolic(i)) {
       ref<ConstantExpr> ce;
-      bool success = solver->getValue(state, read8(i), ce);
+      bool success = solver->getValue(state.constraints, read8(i), ce,
+                                      state.solverMetaData);
       if (!success)
         klee_warning("Solver timed out when getting a value for external call, "
                      "byte %p+%u will have random value",

@@ -42,8 +42,7 @@ public:
 
   virtual void incPathsExplored() = 0;
 
-  virtual void processTestCase(const ExecutionState &state,
-                               const char *err,
+  virtual void processTestCase(ExecutionState &state, const char *err,
                                const char *suffix) = 0;
 };
 
@@ -150,11 +149,9 @@ public:
                                 std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual bool getSymbolicSolution(const ExecutionState &state,
-                                   std::vector<
-                                   std::pair<std::string,
-                                   std::vector<unsigned char> > >
-                                   &res) = 0;
+  virtual bool getSymbolicSolution(
+      ExecutionState &state,
+      std::vector<std::pair<std::string, std::vector<unsigned char>>> &res) = 0;
 
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res) = 0;

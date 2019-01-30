@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
 #include "SeedInfo.h"
+#include "Memory.h"
 #include "TimingSolver.h"
+#include "klee/Constraints.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
@@ -57,13 +58,11 @@ KTestObject *SeedInfo::getNextInput(const MemoryObject *mo,
   }
 }
 
-void SeedInfo::patchSeed(const ExecutionState &state, 
-                         ref<Expr> condition,
+void SeedInfo::patchSeed(ExecutionState &state, ref<Expr> condition,
                          TimingSolver *solver) {
-  std::vector< ref<Expr> > required(state.constraints.begin(),
-                                    state.constraints.end());
-  ExecutionState tmp(required);
-  tmp.addConstraint(condition);
+  SimpleConstraintSet requiredConstraints(state.constraints);
+  ConstraintManager cm(requiredConstraints);
+  cm.addConstraint(condition);
 
   // Try and patch direct reads first, this is likely to resolve the
   // problem quickly and avoids long traversal of all seed
@@ -96,26 +95,29 @@ void SeedInfo::patchSeed(const ExecutionState &state,
                                         ConstantExpr::alloc(it2->second[i], 
                                                             Expr::Int8));
       bool res;
-      bool success = solver->mustBeFalse(tmp, isSeed, res);
+      bool success = solver->mustBeFalse(requiredConstraints, isSeed, res,
+                                         state.solverMetaData);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
         ref<ConstantExpr> value;
-        bool success = solver->getValue(tmp, read, value);
+        bool success = solver->getValue(requiredConstraints, read, value,
+                                        state.solverMetaData);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
         it2->second[i] = value->getZExtValue(8);
-        tmp.addConstraint(EqExpr::create(read, 
-                                         ConstantExpr::alloc(it2->second[i], 
-                                                             Expr::Int8)));
+        cm.addConstraint(EqExpr::create(
+            read, ConstantExpr::alloc(it2->second[i], Expr::Int8)));
       } else {
-        tmp.addConstraint(isSeed);
+        cm.addConstraint(isSeed);
       }
     }
   }
 
   bool res;
-  bool success = solver->mayBeTrue(state, assignment.evaluate(condition), res);
+  bool success =
+      solver->mayBeTrue(state.constraints, assignment.evaluate(condition), res,
+                        state.solverMetaData);
   assert(success && "FIXME: Unhandled solver failure");
   (void) success;
   if (res)
@@ -133,20 +135,21 @@ void SeedInfo::patchSeed(const ExecutionState &state,
                                         ConstantExpr::alloc(it->second[i], 
                                                             Expr::Int8));
       bool res;
-      bool success = solver->mustBeFalse(tmp, isSeed, res);
+      bool success = solver->mustBeFalse(requiredConstraints, isSeed, res,
+                                         state.solverMetaData);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
         ref<ConstantExpr> value;
-        bool success = solver->getValue(tmp, read, value);
+        bool success = solver->getValue(requiredConstraints, read, value,
+                                        state.solverMetaData);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
         it->second[i] = value->getZExtValue(8);
-        tmp.addConstraint(EqExpr::create(read, 
-                                         ConstantExpr::alloc(it->second[i], 
-                                                             Expr::Int8)));
+        cm.addConstraint(EqExpr::create(
+            read, ConstantExpr::alloc(it->second[i], Expr::Int8)));
       } else {
-        tmp.addConstraint(isSeed);
+        cm.addConstraint(isSeed);
       }
     }
   }
@@ -154,8 +157,9 @@ void SeedInfo::patchSeed(const ExecutionState &state,
 #ifndef NDEBUG
   {
     bool res;
-    bool success = 
-      solver->mayBeTrue(state, assignment.evaluate(condition), res);
+    bool success =
+        solver->mayBeTrue(state.constraints, assignment.evaluate(condition),
+                          res, state.solverMetaData);
     assert(success && "FIXME: Unhandled solver failure");            
     (void) success;
     assert(res && "seed patching failed");

@@ -20,8 +20,10 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Solver.h"
 
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -96,8 +98,8 @@ public:
 
   /// Statistics and information
 
-  /// @brief Costs for all queries issued for this state, in seconds
-  mutable time::Span queryCost;
+  /// Meta-data for the solver for state-specific queries
+  SolverQueryMetaData solverMetaData;
 
   /// @brief Weight assigned for importance of this state.  Can be
   /// used for searchers to decide what paths to explore
@@ -156,10 +158,6 @@ public:
   ExecutionState &operator=(const ExecutionState &) = delete;
 
   ExecutionState(KFunction *kf);
-
-  // XXX total hack, just used to make a state so solver can
-  // use on structure
-  ExecutionState(const std::vector<ref<Expr> > &assumptions);
 
   ~ExecutionState();
 

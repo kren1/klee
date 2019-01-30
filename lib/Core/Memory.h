@@ -231,8 +231,7 @@ public:
     Looks at all the symbolic bytes of this object, gets a value for them
     from the solver and puts them in the concreteStore.
   */
-  void flushToConcreteStore(TimingSolver *solver,
-                            const ExecutionState &state) const;
+  void flushToConcreteStore(TimingSolver *solver, ExecutionState &state) const;
 
 private:
   const UpdateList &getUpdates() const;

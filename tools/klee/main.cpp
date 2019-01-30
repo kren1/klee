@@ -333,8 +333,7 @@ public:
 
   void setInterpreter(Interpreter *i);
 
-  void processTestCase(const ExecutionState  &state,
-                       const char *errorMessage,
+  void processTestCase(ExecutionState &state, const char *errorMessage,
                        const char *errorSuffix);
 
   std::string getOutputFilename(const std::string &filename);
@@ -578,7 +577,7 @@ void KleeHandler::writeTestCaseXML(
 }
 
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
-void KleeHandler::processTestCase(const ExecutionState &state,
+void KleeHandler::processTestCase(ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
   unsigned test_id = ++m_numTotalTests;

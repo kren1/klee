@@ -14,6 +14,7 @@
 #include "klee/Solver.h"
 #include "klee/Internal/System/Time.h"
 
+#include <memory>
 #include <vector>
 
 namespace klee {
@@ -24,7 +25,7 @@ namespace klee {
   /// tracking the statistics that we care about.
   class TimingSolver {
   public:
-    Solver *solver;
+    std::unique_ptr<Solver> solver;
     bool simplifyExprs;
 
   public:
@@ -35,9 +36,6 @@ namespace klee {
     /// querying.
     TimingSolver(Solver *_solver, bool _simplifyExprs = true) 
       : solver(_solver), simplifyExprs(_simplifyExprs) {}
-    ~TimingSolver() {
-      delete solver;
-    }
 
     void setTimeout(time::Span t) {
       solver->setCoreSolverTimeout(t);
@@ -47,25 +45,32 @@ namespace klee {
       return solver->getConstraintLog(query);
     }
 
-    bool evaluate(const ExecutionState&, ref<Expr>, Solver::Validity &result);
+    bool evaluate(const ConstraintSet &, ref<Expr>, Solver::Validity &result,
+                  SolverQueryMetaData &metaData);
 
-    bool mustBeTrue(const ExecutionState&, ref<Expr>, bool &result);
+    bool mustBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
+                    SolverQueryMetaData &metaData);
 
-    bool mustBeFalse(const ExecutionState&, ref<Expr>, bool &result);
+    bool mustBeFalse(const ConstraintSet &, ref<Expr>, bool &result,
+                     SolverQueryMetaData &metaData);
 
-    bool mayBeTrue(const ExecutionState&, ref<Expr>, bool &result);
+    bool mayBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
+                   SolverQueryMetaData &metaData);
 
-    bool mayBeFalse(const ExecutionState&, ref<Expr>, bool &result);
+    bool mayBeFalse(const ConstraintSet &, ref<Expr>, bool &result,
+                    SolverQueryMetaData &metaData);
 
-    bool getValue(const ExecutionState &, ref<Expr> expr, 
-                  ref<ConstantExpr> &result);
+    bool getValue(const ConstraintSet &, ref<Expr> expr,
+                  ref<ConstantExpr> &result, SolverQueryMetaData &metaData);
 
-    bool getInitialValues(const ExecutionState&, 
-                          const std::vector<const Array*> &objects,
-                          std::vector< std::vector<unsigned char> > &result);
+    bool getInitialValues(const ConstraintSet &,
+                          const std::vector<const Array *> &objects,
+                          std::vector<std::vector<unsigned char>> &result,
+                          SolverQueryMetaData &metaData);
 
-    std::pair< ref<Expr>, ref<Expr> >
-    getRange(const ExecutionState&, ref<Expr> query);
+    std::pair<ref<Expr>, ref<Expr>> getRange(const ConstraintSet &,
+                                             ref<Expr> query,
+                                             SolverQueryMetaData &metaData);
   };
 
 }
