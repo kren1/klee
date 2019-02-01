@@ -7,7 +7,6 @@
 #
 #===------------------------------------------------------------------------===#
 add_subdirectory(Runtest)
-add_subdirectory(Foo)
 
 if ("${KLEE_RUNTIME_BUILD_TYPE}" MATCHES "Release")
   set(RUNTIME_IS_RELEASE 1)
