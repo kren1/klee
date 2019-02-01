@@ -3552,6 +3552,10 @@ void Executor::executeAlloc(ExecutionState &state,
 
         s.addConstraint(UleExpr::create(lb, size));
         s.addConstraint(UleExpr::create(size, ub));
+
+        // avoid a large value for the number of elements
+        if (size->getKind() == Expr::Kind::Mul)
+          s.addConstraint(UleExpr::create(size->getKid(1), ub));
         
         size = toConstant(s, size, "symbolic alloc");
       
