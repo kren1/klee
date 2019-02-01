@@ -126,6 +126,8 @@ public:
 
   // Move assignment operator
   ref<T> &operator= (ref<T> &&r) {
+    dec();
+
     ptr = std::move(r.ptr);
     r.ptr = nullptr;
 
@@ -135,6 +137,8 @@ public:
 
   // Move assignment operator
   template<class U> ref<T> &operator= (ref<U> &&r) {
+    dec();
+
     ptr = std::move(r.ptr);
     r.ptr = nullptr;
 
