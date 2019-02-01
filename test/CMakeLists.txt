@@ -118,7 +118,7 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 get_property(LIB_KLEE_RUN_TEST_PATH
-  TARGET kleeRuntest
+  TARGET kleeRuntest64
   PROPERTY LOCATION
 )
 
