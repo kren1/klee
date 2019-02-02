@@ -2055,27 +2055,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Arithmetic / logical
 
-  case Instruction::Add:
-  case Instruction::FAdd:
-  {
+  case Instruction::Add: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
     break;
   }
 
-  case Instruction::Sub:
-  case Instruction::FSub:
-  {
+  case Instruction::Sub: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
     break;
   }
  
-  case Instruction::Mul:
-  case Instruction::FMul:
-  {
+  case Instruction::Mul: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
@@ -2090,9 +2084,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
-  case Instruction::SDiv:
-  case Instruction::FDiv:
-  {
+  case Instruction::SDiv: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
@@ -2108,9 +2100,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
-  case Instruction::SRem:
-  case Instruction::FRem:
-  {
+  case Instruction::SRem: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
@@ -2168,14 +2158,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Compare
 
-  case Instruction::ICmp:
-  {
+  case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
 
     switch(ii->getPredicate()) {
-    case ICmpInst::ICMP_EQ:
-    {
+    case ICmpInst::ICMP_EQ: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = EqExpr::create(left, right);
@@ -2183,8 +2171,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_NE:
-      {
+    case ICmpInst::ICMP_NE: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = NeExpr::create(left, right);
@@ -2192,8 +2179,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_UGT:
-    {
+    case ICmpInst::ICMP_UGT: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgtExpr::create(left, right);
@@ -2201,8 +2187,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_UGE:
-    {
+    case ICmpInst::ICMP_UGE: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgeExpr::create(left, right);
@@ -2210,8 +2195,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_ULT:
-    {
+    case ICmpInst::ICMP_ULT: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UltExpr::create(left, right);
@@ -2219,8 +2203,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_ULE:
-    {
+    case ICmpInst::ICMP_ULE: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UleExpr::create(left, right);
@@ -2228,8 +2211,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_SGT:
-    {
+    case ICmpInst::ICMP_SGT: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgtExpr::create(left, right);
@@ -2237,8 +2219,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_SGE:
-    {
+    case ICmpInst::ICMP_SGE: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgeExpr::create(left, right);
@@ -2246,8 +2227,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_SLT:
-    {
+    case ICmpInst::ICMP_SLT: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SltExpr::create(left, right);
@@ -2255,8 +2235,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    case ICmpInst::ICMP_SLE:
-    {
+    case ICmpInst::ICMP_SLE: {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SleExpr::create(left, right);
@@ -2269,81 +2248,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
-
-  case Instruction::FCmp:
-  {
-    CmpInst *ci = cast<CmpInst>(i);
-    FCmpInst *ii = cast<FCmpInst>(ci);
-
-    switch(ii->getPredicate()) {
-    case FCmpInst::FCMP_UEQ:
-    case FCmpInst::FCMP_OEQ:
-    {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = EqExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    case FCmpInst::FCMP_UNE:
-    case FCmpInst::FCMP_ONE:
-      {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = NeExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_OGT:
-    {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgtExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_OGE:
-    {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgeExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_OLT:
-    {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SltExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    case FCmpInst::FCMP_ULE:
-    case FCmpInst::FCMP_OLE:
-    {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SleExpr::create(left, right);
-      bindLocal(ki, state, result);
-      break;
-    }
-
-    default:
-      terminateStateOnExecError(state, "invalid ICmp predicate");
-    }
-    break;
-  }
-
-
-  
+ 
     // Memory instructions...
   case Instruction::Alloca: {
     AllocaInst *ai = cast<AllocaInst>(i);
@@ -2392,9 +2297,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
     // Conversion
-  case Instruction::Trunc:
-  case Instruction::FPTrunc:
-  {
+  case Instruction::Trunc: {
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ExtractExpr::create(eval(ki, 0, state).value,
                                            0,
@@ -2402,9 +2305,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
     break;
   }
-  case Instruction::ZExt:
-  case Instruction::FPExt:
-  {
+  case Instruction::ZExt: {
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
@@ -2441,7 +2342,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
     // Floating point instructions
-#if 0
+
   case Instruction::FAdd: {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
@@ -2553,11 +2454,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   }
-#endif
 
-    
   case Instruction::FPToUI: {
-#if 0
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2575,13 +2473,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     Arg.convertToInteger(valueRef, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
-#endif
-    bindLocal(ki, state, eval(ki, 0, state).value);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
   case Instruction::FPToSI: {
-#if 0
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2599,13 +2495,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     Arg.convertToInteger(valueRef, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
-#endif
-    bindLocal(ki, state, eval(ki, 0, state).value);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
   case Instruction::UIToFP: {
-#if 0
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2616,13 +2510,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat f(*semantics, 0);
     f.convertFromAPInt(arg->getAPValue(), false,
                        llvm::APFloat::rmNearestTiesToEven);
-#endif
-    bindLocal(ki, state, eval(ki, 0, state).value);
+
+    bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   }
 
   case Instruction::SIToFP: {
-#if 0
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2633,12 +2526,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat f(*semantics, 0);
     f.convertFromAPInt(arg->getAPValue(), true,
                        llvm::APFloat::rmNearestTiesToEven);
-#endif
-    bindLocal(ki, state, eval(ki, 0, state).value);
+
+    bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   }
 
-#if 0
   case Instruction::FCmp: {
     FCmpInst *fi = cast<FCmpInst>(i);
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
@@ -2722,8 +2614,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
     break;
   }
-#endif
-    
   case Instruction::InsertValue: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
 
