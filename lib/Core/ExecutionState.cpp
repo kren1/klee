@@ -84,7 +84,7 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       instsSinceCovNew(state.instsSinceCovNew), coveredNew(state.coveredNew),
       forkDisabled(state.forkDisabled), coveredLines(state.coveredLines),
       ptreeNode(state.ptreeNode), symbolics(state.symbolics),
-      arrayNames(state.arrayNames), openMergeStack(state.openMergeStack),
+      openMergeStack(state.openMergeStack),
       steppedInstructions(state.steppedInstructions) {
   for (auto cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
@@ -116,7 +116,7 @@ void ExecutionState::popFrame() {
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
-  symbolics.push_back(std::make_pair(ref<const MemoryObject>(mo), array));
+  symbolics.emplace_back(std::make_pair(ref<const MemoryObject>(mo), array));
 }
 ///
 

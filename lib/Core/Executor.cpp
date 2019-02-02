@@ -3759,10 +3759,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
-    std::string uniqueName = name;
-    while (!state.arrayNames.insert(uniqueName).second) {
-      uniqueName = name + "_" + llvm::utostr(state.arrayNames.size());
-    }
+    std::string uniqueName = name + "_" + llvm::utostr(state.symbolics.size());
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
