@@ -39,6 +39,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
   bool success = solver->evaluate(Query(constraints, expr), result);
 
   metaData.queryCost += timer.check();
+  metaData.queryCount += 1;
 
   return success;
 }
@@ -59,6 +60,7 @@ bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
   bool success = solver->mustBeTrue(Query(constraints, expr), result);
 
   metaData.queryCost += timer.check();
+  metaData.queryCount += 1;
 
   return success;
 }
@@ -103,6 +105,7 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
   bool success = solver->getValue(Query(constraints, expr), result);
 
   metaData.queryCost += timer.check();
+  metaData.queryCount += 1;
 
   return success;
 }
@@ -120,6 +123,7 @@ bool TimingSolver::getInitialValues(
       Query(constraints, ConstantExpr::alloc(0, Expr::Bool)), objects, result);
 
   metaData.queryCost += timer.check();
+  metaData.queryCount += 1;
 
   return success;
 }
@@ -130,5 +134,7 @@ TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
   auto result = solver->getRange(Query(constraints, expr));
   metaData.queryCost += timer.check();
+  metaData.queryCount += 1;
+
   return result;
 }

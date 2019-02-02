@@ -26,6 +26,7 @@ class SolverImpl;
 struct SolverQueryMetaData {
   /// @brief Accumulation of query costs in seconds
   time::Span queryCost;
+  uint32_t queryCount = 0;
 };
 
 struct Query {

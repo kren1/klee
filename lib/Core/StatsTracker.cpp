@@ -337,9 +337,9 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
 	// that it dependet on some symbolic values
         if (&*inst->getParent()->begin() == inst &&
             !inst->getParent()->getSinglePredecessor() &&
-            es.solverMetaData.queryCost > klee::time::Span()) {
+            es.solverMetaData.queryCount > 0) {
           executor.interpreterHandler->processTestCase(es, 0, 0);
-          es.solverMetaData.queryCost = klee::time::Span();
+          es.solverMetaData.queryCount = 0;
        }
       }
     }
