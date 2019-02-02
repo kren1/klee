@@ -190,6 +190,8 @@ public:
   // The numbers of times this state has run through Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
+  uint64_t arrayCntr = 0;
+
 private:
   ExecutionState(const ExecutionState &state);
 

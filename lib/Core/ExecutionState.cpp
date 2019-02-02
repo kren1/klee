@@ -85,7 +85,8 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       forkDisabled(state.forkDisabled), coveredLines(state.coveredLines),
       ptreeNode(state.ptreeNode), symbolics(state.symbolics),
       openMergeStack(state.openMergeStack),
-      steppedInstructions(state.steppedInstructions) {
+      steppedInstructions(state.steppedInstructions),
+      arrayCntr(state.arrayCntr) {
   for (auto cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
