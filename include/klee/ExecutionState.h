@@ -97,6 +97,17 @@ public:
   StackFrame(KInstIterator caller, KFunction *kf);
 };
 
+struct Symbol_t;
+struct Symbol_t {
+  ref<const MemoryObject> mo;
+  const Array *array;
+
+  ref<Symbol_t> next;
+  ReferenceCounter __refCount;
+  Symbol_t(ref<const MemoryObject> m, const Array *a, ref<Symbol_t> s)
+      : mo(std::move(m)), array(a), next(std::move(next)) {}
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -167,9 +178,7 @@ public:
   PTreeNode *ptreeNode;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
-  //
-  // FIXME: Move to a shared list structure (not critical).
-  std::vector<std::pair<ref<const MemoryObject>, const Array *>> symbolics;
+  ref<Symbol_t> symbolics;
 
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);

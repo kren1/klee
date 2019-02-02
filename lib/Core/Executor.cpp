@@ -3759,7 +3759,8 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
-    std::string uniqueName = name + "_" + llvm::utostr(state.symbolics.size());
+    std::string uniqueName =
+        name + "_" + llvm::utostr(state.steppedInstructions);
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
@@ -3992,8 +3993,10 @@ bool Executor::getSymbolicSolution(
   // the preferred constraints.  See test/Features/PreferCex.c for
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
-  for (auto symbol : state.symbolics) {
-    const auto &mo = symbol.first;
+
+  for (auto symbol = state.symbolics.get(); symbol != nullptr;
+       symbol = symbol->next.get()) {
+    const auto &mo = symbol->mo;
     for (auto &example : mo->cexPreferences) {
       bool mustBeTrue;
       // Attempt to bound byte to constraints held in cexPreferences
@@ -4013,8 +4016,10 @@ bool Executor::getSymbolicSolution(
   }
 
   std::vector<const Array*> objects;
-  for (auto &symbol : state.symbolics)
-    objects.push_back(symbol.second);
+  for (auto symbol = state.symbolics.get(); symbol != nullptr;
+       symbol = symbol->next.get()) {
+    objects.push_back(symbol->array);
+  }
 
   std::vector<std::vector<unsigned char>> values;
   bool success = solver->getInitialValues(constraintsCopy, objects, values,
@@ -4030,9 +4035,12 @@ bool Executor::getSymbolicSolution(
                              ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
-  
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+
+  size_t i = 0;
+  for (auto symbol = state.symbolics.get(); symbol != nullptr;
+       symbol = symbol->next.get(), ++i) {
+    res.push_back(std::make_pair(symbol->mo->name, values[i]));
+  }
   return true;
 }
 

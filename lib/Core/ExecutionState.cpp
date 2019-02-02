@@ -116,7 +116,8 @@ void ExecutionState::popFrame() {
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
-  symbolics.emplace_back(std::make_pair(ref<const MemoryObject>(mo), array));
+  symbolics = ref<Symbol_t>(
+      new Symbol_t(ref<const MemoryObject>(mo), array, symbolics));
 }
 ///
 
@@ -160,7 +161,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   // XXX is it even possible for these to differ? does it matter? probably
   // implies difference in object states?
 
-  if (symbolics != b.symbolics)
+  if (symbolics.get() != b.symbolics.get())
     return false;
 
   {
