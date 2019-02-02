@@ -49,6 +49,32 @@ namespace klee {
 struct ReferenceCounter {
   unsigned refCount;
   ReferenceCounter() : refCount(0) {}
+
+  // Explicitly initialise reference counter with 0 again
+  // As this object is part of another object, the copy-constructor
+  // might be invoked as part of the other one.
+  ReferenceCounter(const ReferenceCounter&r) : refCount(0) {}
+
+  ReferenceCounter& operator=(const ReferenceCounter& a)
+  {
+      if (this == &a) return *this;
+      refCount = 0;
+      return *this;
+  }
+
+  // Move constructor
+
+  ReferenceCounter(ReferenceCounter&&r) {
+    refCount = r.refCount;
+    r.refCount = 0;
+  }
+
+  ReferenceCounter& operator=(ReferenceCounter&& other){
+    if (this == &other) return *this;
+    refCount = other.refCount;
+    other.refCount = 0;
+    return *this;
+  }
 };
 
 template<class T>
@@ -126,24 +152,26 @@ public:
 
   // Move assignment operator
   ref<T> &operator= (ref<T> &&r) {
-    dec();
+    if (this == &r)
+      return *this;
 
+    dec();
     ptr = std::move(r.ptr);
     r.ptr = nullptr;
-
 
     return *this;
   }
 
   // Move assignment operator
-  template<class U> ref<T> &operator= (ref<U> &&r) {
-    dec();
-
-    ptr = std::move(r.ptr);
-    r.ptr = nullptr;
-
-    return *this;
-  }
+//  template<class U> ref<T> &operator= (ref<U> &&r) {
+//    if (this != &r) {
+//      dec();
+//      ptr = std::move(r.ptr);
+//      r.ptr = nullptr;
+//    }
+//
+//    return *this;
+//  }
 
   T& operator*() const {
     return *ptr;
@@ -154,6 +182,10 @@ public:
   }
 
   bool isNull() const { return ptr == 0; }
+
+  bool isShared() const {
+    return ptr && ptr->__refCount.refCount > 1;
+  }
 
   // assumes non-null arguments
   int compare(const ref &rhs) const {
