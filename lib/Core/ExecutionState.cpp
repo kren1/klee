@@ -41,7 +41,7 @@ namespace {
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
     : caller(_caller), kf(_kf), callPathNode(0), minDistToUncoveredOnReturn(0),
       varargs(0) {
-  if (kf->numRegisters <= 128)
+  if (kf->numRegisters <= 32)
     locals.resize(kf->numRegisters);
 }
 
