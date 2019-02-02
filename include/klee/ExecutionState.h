@@ -44,7 +44,41 @@ struct StackFrame {
   CallPathNode *callPathNode;
 
   std::vector<const MemoryObject *> allocas;
+
+private:
   std::vector<Cell> locals;
+  std::vector<size_t> local_index;
+  std::vector<Cell> local_value;
+
+public:
+  Cell &getCell(size_t index) {
+    if (!locals.empty())
+      return locals[index];
+
+    auto pos = std::lower_bound(local_index.begin(), local_index.end(), index);
+    auto diff = pos - local_index.begin();
+    if (pos != local_index.end() && *pos == index)
+      return local_value[diff];
+
+    // insert new value;
+    local_index.insert(pos, index);
+    local_value.insert(local_value.begin() + diff, Cell());
+
+    return local_value[diff];
+  }
+
+  const Cell &getCell(size_t index) const {
+    if (!locals.empty())
+      return locals[index];
+
+    auto pos = std::lower_bound(local_index.begin(), local_index.end(), index);
+    auto diff = pos - local_index.begin();
+    if (pos != local_index.end() && *pos == index)
+      return local_value[diff];
+
+    assert(0);
+    return local_value[diff];
+  }
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to

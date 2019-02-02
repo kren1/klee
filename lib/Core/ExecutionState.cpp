@@ -39,8 +39,10 @@ namespace {
 /***/
 
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
-  : caller(_caller), kf(_kf), callPathNode(0), 
-    locals(kf->numRegisters), minDistToUncoveredOnReturn(0), varargs(0) {
+    : caller(_caller), kf(_kf), callPathNode(0), minDistToUncoveredOnReturn(0),
+      varargs(0) {
+  if (kf->numRegisters <= 128)
+    locals.resize(kf->numRegisters);
 }
 
 /***/
@@ -273,8 +275,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
     StackFrame &af = *itA;
     const StackFrame &bf = *itB;
     for (unsigned i=0; i<af.kf->numRegisters; i++) {
-      ref<Expr> &av = af.locals[i].value;
-      const ref<Expr> &bv = bf.locals[i].value;
+      ref<Expr> &av = af.getCell(i).value;
+      const ref<Expr> &bv = bf.getCell(i).value;
       if (av.isNull() || bv.isNull()) {
         // if one is null then by implication (we are at same pc)
         // we cannot reuse this local, so just ignore
@@ -333,7 +335,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
       out << ai->getName().str();
       // XXX should go through function
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
+      ref<Expr> value = sf.getCell(sf.kf->getArgRegister(index++)).value;
       if (value.get() && isa<ConstantExpr>(value))
         out << "=" << value;
     }

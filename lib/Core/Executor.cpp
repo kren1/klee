@@ -1167,8 +1167,7 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
     return kmodule->constantTable[index];
   } else {
     unsigned index = vnumber;
-    StackFrame &sf = state.stack.back();
-    return sf.locals[index];
+    return state.stack.back().getCell(index);
   }
 }
 
