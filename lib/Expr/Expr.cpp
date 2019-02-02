@@ -560,8 +560,8 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
     uint64_t size = ul.root->size;
     if (concreteIndex < size) {
       // Create shortened update list
-      auto newUpdateList = new UpdateList(ul.root, un);
-      return ReadExpr::alloc(*newUpdateList, index);
+      auto newUpdateList = UpdateList(ul.root, un);
+      return ReadExpr::alloc(newUpdateList, index);
     }
   }
 
