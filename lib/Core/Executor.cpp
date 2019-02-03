@@ -4044,10 +4044,13 @@ bool Executor::getSymbolicSolution(
     return false;
   }
 
+  auto max = values.size();
+  res.resize(max);
+  --max;
   size_t i = 0;
   for (auto symbol = state.symbolics.get(); symbol != nullptr;
        symbol = symbol->next.get(), ++i) {
-    res.push_back(std::make_pair(symbol->mo->name, values[i]));
+	  res[max - i] =std::make_pair(symbol->mo->name, values[i]);
   }
   return true;
 }
