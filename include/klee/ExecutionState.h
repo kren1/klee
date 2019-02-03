@@ -116,7 +116,7 @@ struct Symbol_t {
   ref<Symbol_t> next;
   ReferenceCounter __refCount;
   Symbol_t(ref<const MemoryObject> m, const Array *a, ref<Symbol_t> s)
-      : mo(std::move(m)), array(a), next(std::move(next)) {}
+      : mo(std::move(m)), array(a), next(std::move(s)) {}
 };
 
 /// @brief ExecutionState representing a path under exploration
