@@ -181,5 +181,6 @@ void MemoryManager::markFreed(MemoryObject *mo) {
 }
 
 size_t MemoryManager::getUsedDeterministicSize() {
-  return nextFreeSlot - deterministicSpace;
+  return spaceSize;
+//  return nextFreeSlot - deterministicSpace;
 }
