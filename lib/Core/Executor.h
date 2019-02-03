@@ -261,9 +261,9 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
-  void transferToBasicBlock(llvm::BasicBlock *dst, 
-			    llvm::BasicBlock *src,
-			    ExecutionState &state);
+  void transferToBasicBlock(const llvm::BasicBlock *dst,
+                            const llvm::BasicBlock *src,
+                            ExecutionState &state) const;
 
   void callExternalFunction(ExecutionState &state,
                             KInstruction *target,
@@ -369,12 +369,12 @@ private:
   Cell& getArgumentCell(ExecutionState &state,
                         KFunction *kf,
                         unsigned index) {
-    return state.stack.back().getCell(kf->getArgRegister(index));
+    return state.getOwnStackFrame().getCell(kf->getArgRegister(index));
   }
 
   Cell& getDestCell(ExecutionState &state,
                     KInstruction *target) {
-    return state.stack.back().getCell(target->dest);
+    return state.getOwnStackFrame().getCell(target->dest);
   }
 
   void bindLocal(KInstruction *target, 

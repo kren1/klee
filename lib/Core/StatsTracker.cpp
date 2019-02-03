@@ -309,7 +309,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
 
     Instruction *inst = es.pc->inst;
     const InstructionInfo &ii = *es.pc->info;
-    StackFrame &sf = es.stack.back();
+    const StackFrame &sf = *es.getCurrentFrame();
     theStatisticManager->setIndex(ii.id);
     if (UseCallPaths)
       theStatisticManager->setContext(&sf.callPathNode->statistics);
@@ -360,7 +360,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
 /* Should be called _after_ the es->pushFrame() */
 void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
   if (OutputIStats) {
-    StackFrame &sf = es.stack.back();
+    StackFrame &sf = es.getOwnStackFrame();
 
     if (UseCallPaths) {
       CallPathNode *parent = parentFrame ? parentFrame->callPathNode : 0;
@@ -373,7 +373,7 @@ void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
   }
 
   if (updateMinDistToUncovered) {
-    StackFrame &sf = es.stack.back();
+    StackFrame &sf = es.getOwnStackFrame();
 
     uint64_t minDistAtRA = 0;
     if (parentFrame)
@@ -481,7 +481,8 @@ void StatsTracker::updateStateStatistics(uint64_t addend) {
     const InstructionInfo &ii = *state.pc->info;
     theStatisticManager->incrementIndexedValue(stats::states, ii.id, addend);
     if (UseCallPaths)
-      state.stack.back().callPathNode->statistics.incrementValue(stats::states, addend);
+      state.getCurrentFrame()->callPathNode->statistics.incrementValue(
+          stats::states, addend);
   }
 }
 
@@ -903,24 +904,31 @@ void StatsTracker::computeReachableUncovered() {
     }
   } while (changed);
 
-  for (std::set<ExecutionState*>::iterator it = executor.states.begin(),
-         ie = executor.states.end(); it != ie; ++it) {
-    ExecutionState *es = *it;
+  std::vector<StackFrame *> stack;
+  for (auto &state : executor.states) {
+    // work around linked-list of stackframes
+    stack.clear();
+
+    for (auto *currentFrame = state->currentStackFrame.get();
+         currentFrame != nullptr;
+         currentFrame = currentFrame->parentFrame.get())
+      stack.push_back(currentFrame);
+
     uint64_t currentFrameMinDist = 0;
-    for (ExecutionState::stack_ty::iterator sfIt = es->stack.begin(),
-           sf_ie = es->stack.end(); sfIt != sf_ie; ++sfIt) {
-      ExecutionState::stack_ty::iterator next = sfIt + 1;
+    for (auto sfIt = stack.rbegin(), sf_ie = stack.rend(); sfIt != sf_ie;
+         ++sfIt) {
+      auto next = sfIt + 1;
       KInstIterator kii;
 
-      if (next==es->stack.end()) {
-        kii = es->pc;
+      if (next == sf_ie) {
+        kii = state->pc;
       } else {
-        kii = next->caller;
+        kii = (*next)->caller;
         ++kii;
       }
-      
-      sfIt->minDistToUncoveredOnReturn = currentFrameMinDist;
-      
+
+      (*sfIt)->minDistToUncoveredOnReturn = currentFrameMinDist;
+
       currentFrameMinDist = computeMinDistToUncovered(kii, currentFrameMinDist);
     }
   }

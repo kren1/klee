@@ -623,8 +623,9 @@ public:
     r->computeHash();
     return r;
   }
-  
-  static ref<Expr> create(ref<Expr> c, ref<Expr> t, ref<Expr> f);
+
+  static ref<Expr> create(const ref<Expr> &c, const ref<Expr> &t,
+                          const ref<Expr> &f);
 
   Width getWidth() const { return trueExpr->getWidth(); }
   Kind getKind() const { return Select; }

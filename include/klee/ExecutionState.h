@@ -38,6 +38,7 @@ struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 
+struct StackFrame;
 struct StackFrame {
   KInstIterator caller;
   KFunction *kf;
@@ -50,7 +51,11 @@ private:
   std::vector<size_t> local_index;
   std::vector<Cell> local_value;
 
+  StackFrame(const StackFrame &f) = default;
+
 public:
+  ref<StackFrame> clone() const { return new StackFrame(*this); }
+
   Cell &getCell(size_t index) {
     if (!locals.empty())
       return locals[index];
@@ -94,7 +99,13 @@ public:
   // of intrinsic lowering.
   MemoryObject *varargs;
 
-  StackFrame(KInstIterator caller, KFunction *kf);
+  StackFrame(KInstIterator caller, KFunction *kf, ref<StackFrame> parent);
+
+  StackFrame() = delete;
+  StackFrame &operator=(const StackFrame &) = delete;
+
+  ReferenceCounter __refCount;
+  ref<StackFrame> parentFrame;
 };
 
 struct Symbol_t;
@@ -116,6 +127,10 @@ public:
 private:
   std::map<std::string, std::string> fnAliases;
 
+  /// @brief Stack representing the current instruction stream
+  ref<StackFrame> currentStackFrame;
+  friend class StatsTracker; // Needs direct access to frame
+
 public:
   // Execution - Control Flow specific
 
@@ -126,8 +141,16 @@ public:
   /// @brief Pointer to instruction which is currently executed
   KInstIterator prevPC;
 
-  /// @brief Stack representing the current instruction stream
-  stack_ty stack;
+  const StackFrame *getCurrentFrame() const { return currentStackFrame.get(); }
+
+  /// Returns the stack frame that is uniquely owned by this frame
+  StackFrame &getOwnStackFrame() {
+    // Create copy of frame if shared
+    if (currentStackFrame.isShared())
+      currentStackFrame = currentStackFrame->clone();
+
+    return *currentStackFrame.get();
+  }
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)

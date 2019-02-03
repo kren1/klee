@@ -38,9 +38,10 @@ namespace {
 
 /***/
 
-StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
+StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf,
+                       ref<StackFrame> parent_)
     : caller(_caller), kf(_kf), callPathNode(0), minDistToUncoveredOnReturn(0),
-      varargs(0) {
+      varargs(0), parentFrame(parent_) {
   if (kf->numRegisters <= 32)
     locals.resize(kf->numRegisters);
 }
@@ -67,12 +68,14 @@ ExecutionState::~ExecutionState() {
     cur_mergehandler->removeOpenState(this);
   }
 
-  while (!stack.empty()) popFrame();
+  while (!currentStackFrame.isNull())
+    popFrame();
 }
 
 ExecutionState::ExecutionState(const ExecutionState &state)
-    : fnAliases(state.fnAliases), pc(state.pc), prevPC(state.prevPC),
-      stack(state.stack), incomingBBIndex(state.incomingBBIndex),
+    : fnAliases(state.fnAliases), currentStackFrame(state.currentStackFrame),
+      pc(state.pc), prevPC(state.prevPC),
+      incomingBBIndex(state.incomingBBIndex),
 
       addressSpace(state.addressSpace), constraints(state.constraints),
 
@@ -105,15 +108,15 @@ ExecutionState *ExecutionState::branch() {
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  stack.push_back(StackFrame(caller,kf));
+  currentStackFrame = new StackFrame(caller, kf, currentStackFrame);
 }
 
 void ExecutionState::popFrame() {
-  StackFrame &sf = stack.back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
-         ie = sf.allocas.end(); it != ie; ++it)
-    addressSpace.unbindObject(*it);
-  stack.pop_back();
+  const auto &frame = *getCurrentFrame();
+  for (auto &alloca : frame.allocas)
+    addressSpace.unbindObject(alloca);
+  auto pFrame = currentStackFrame->parentFrame;
+  currentStackFrame = pFrame;
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
@@ -166,16 +169,16 @@ bool ExecutionState::merge(const ExecutionState &b) {
     return false;
 
   {
-    std::vector<StackFrame>::const_iterator itA = stack.begin();
-    std::vector<StackFrame>::const_iterator itB = b.stack.begin();
-    while (itA!=stack.end() && itB!=b.stack.end()) {
+    const auto *frameA = currentStackFrame.get();
+    const auto *frameB = b.currentStackFrame.get();
+    while (frameA != nullptr && frameB != nullptr) {
       // XXX vaargs?
-      if (itA->caller!=itB->caller || itA->kf!=itB->kf)
+      if (frameA->caller != frameB->caller || frameA->kf != frameB->kf)
         return false;
-      ++itA;
-      ++itB;
+      frameA = frameA->parentFrame.get();
+      frameB = frameB->parentFrame.get();
     }
-    if (itA!=stack.end() || itB!=b.stack.end())
+    if (frameA != nullptr || frameB != nullptr)
       return false;
   }
 
@@ -271,19 +274,19 @@ bool ExecutionState::merge(const ExecutionState &b) {
   // it seems like it can make a difference, even though logically
   // they must contradict each other and so inA => !inB
 
-  std::vector<StackFrame>::iterator itA = stack.begin();
-  std::vector<StackFrame>::const_iterator itB = b.stack.begin();
-  for (; itA!=stack.end(); ++itA, ++itB) {
-    StackFrame &af = *itA;
-    const StackFrame &bf = *itB;
-    for (unsigned i=0; i<af.kf->numRegisters; i++) {
-      ref<Expr> &av = af.getCell(i).value;
-      const ref<Expr> &bv = bf.getCell(i).value;
+  auto frameA = getCurrentFrame();
+  auto frameB = b.getCurrentFrame();
+  for (; frameA != nullptr;
+       frameA = frameA->parentFrame.get(), frameB = frameB->parentFrame.get()) {
+    for (unsigned i = 0; i < frameA->kf->numRegisters; i++) {
+      const auto &av = frameA->getCell(i).value;
+      const auto &bv = frameB->getCell(i).value;
       if (av.isNull() || bv.isNull()) {
         // if one is null then by implication (we are at same pc)
         // we cannot reuse this local, so just ignore
       } else {
-        av = SelectExpr::create(inA, av, bv);
+        // XXX add again
+        //        av = SelectExpr::create(inA, av, bv);
       }
     }
   }
@@ -318,10 +321,15 @@ bool ExecutionState::merge(const ExecutionState &b) {
 void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   unsigned idx = 0;
   const KInstruction *target = prevPC;
-  for (ExecutionState::stack_ty::const_reverse_iterator
-         it = stack.rbegin(), ie = stack.rend();
-       it != ie; ++it) {
-    const StackFrame &sf = *it;
+  const auto *currentFrame = getCurrentFrame();
+  std::vector<const StackFrame *> stack;
+  while (currentFrame != nullptr) {
+    stack.emplace_back(currentFrame);
+    currentFrame = currentFrame->parentFrame.get();
+  }
+
+  for (const auto *s : stack) {
+    const StackFrame &sf = *s;
     Function *f = sf.kf->function;
     const InstructionInfo &ii = *target->info;
     out << "\t#" << idx++;

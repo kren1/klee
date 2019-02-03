@@ -897,7 +897,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
        MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
       statsTracker->elapsed() > time::seconds(60)) {
     StatisticManager &sm = *theStatisticManager;
-    CallPathNode *cpn = current.stack.back().callPathNode;
+    const CallPathNode *cpn = current.getCurrentFrame()->callPathNode;
     if ((MaxStaticForkPct<1. &&
          sm.getIndexedValue(stats::forks, sm.getIndex()) > 
          stats::forks*MaxStaticForkPct) ||
@@ -1167,7 +1167,7 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
     return kmodule->constantTable[index];
   } else {
     unsigned index = vnumber;
-    return state.stack.back().getCell(index);
+    return state.getCurrentFrame()->getCell(index);
   }
 }
 
@@ -1348,7 +1348,7 @@ void Executor::executeCall(ExecutionState &state,
       // va_arg is handled by caller and intrinsic lowering, see comment for
       // ExecutionState::varargs
     case Intrinsic::vastart:  {
-      StackFrame &sf = state.stack.back();
+      const StackFrame &sf = *state.getCurrentFrame();
 
       // varargs can be zero if no varargs were provided
       if (!sf.varargs)
@@ -1404,11 +1404,13 @@ void Executor::executeCall(ExecutionState &state,
   } else {
     // Check if maximum stack size was reached.
     // We currently only count the number of stack frames
-    if (RuntimeMaxStackFrames && state.stack.size() > RuntimeMaxStackFrames) {
-      terminateStateEarly(state, "Maximum stack size reached.");
-      klee_warning("Maximum stack size reached.");
-      return;
-    }
+    // XXX add again
+    //    if (RuntimeMaxStackFrames && state.stack.size() >
+    //    RuntimeMaxStackFrames) {
+    //      terminateStateEarly(state, "Maximum stack size reached.");
+    //      klee_warning("Maximum stack size reached.");
+    //      return;
+    //    }
 
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
@@ -1420,7 +1422,8 @@ void Executor::executeCall(ExecutionState &state,
     state.pc = kf->instructions;
 
     if (statsTracker)
-      statsTracker->framePushed(state, &state.stack[state.stack.size()-2]);
+      statsTracker->framePushed(state,
+                                state.getCurrentFrame()->parentFrame.get());
 
      // TODO: support "byval" parameter attribute
      // TODO: support zeroext, signext, sret attributes
@@ -1445,7 +1448,7 @@ void Executor::executeCall(ExecutionState &state,
         return;
       }
 
-      StackFrame &sf = state.stack.back();
+      StackFrame &sf = state.getOwnStackFrame();
       unsigned size = 0;
       bool requires16ByteAlignment = false;
       for (unsigned i = funcArgs; i < callingArgs; i++) {
@@ -1528,8 +1531,9 @@ void Executor::executeCall(ExecutionState &state,
   }
 }
 
-void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src, 
-                                    ExecutionState &state) {
+void Executor::transferToBasicBlock(const BasicBlock *dst,
+                                    const BasicBlock *src,
+                                    ExecutionState &state) const {
   // Note that in general phi nodes can reuse phi values from the same
   // block but the incoming value is the eval() result *before* the
   // execution of any phi nodes. this is pathological and doesn't
@@ -1543,7 +1547,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // instructions know which argument to eval, set the pc, and continue.
   
   // XXX this lookup has to go ?
-  KFunction *kf = state.stack.back().kf;
+  KFunction *kf = state.getCurrentFrame()->kf;
   unsigned entry = kf->basicBlockEntry[dst];
   state.pc = &kf->instructions[entry];
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
@@ -1624,16 +1628,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Control flow
   case Instruction::Ret: {
     ReturnInst *ri = cast<ReturnInst>(i);
-    KInstIterator kcaller = state.stack.back().caller;
-    Instruction *caller = kcaller ? kcaller->inst : 0;
+    const KInstIterator kcaller = state.getCurrentFrame()->caller;
+    const Instruction *caller = kcaller ? kcaller->inst : 0;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
     
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
-    
-    if (state.stack.size() <= 1) {
+
+    if (state.getCurrentFrame() == nullptr ||
+        state.getCurrentFrame()->parentFrame.isNull()) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
@@ -1642,7 +1647,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (statsTracker)
         statsTracker->framePopped(state);
 
-      if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
+      if (const InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
         state.pc = kcaller;
@@ -1657,8 +1662,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           Expr::Width to = getWidthForLLVMType(t);
             
           if (from != to) {
-            CallSite cs = (isa<InvokeInst>(caller) ? CallSite(cast<InvokeInst>(caller)) : 
-                           CallSite(cast<CallInst>(caller)));
+            ImmutableCallSite cs =
+                (isa<InvokeInst>(caller)
+                     ? ImmutableCallSite(cast<InvokeInst>(caller))
+                     : ImmutableCallSite(cast<CallInst>(caller)));
 
             // XXX need to check other param attrs ?
 #if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
@@ -1703,7 +1710,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
       // up with convenient instruction specific data.
-      if (statsTracker && state.stack.back().kf->trackCoverage)
+      if (statsTracker && state.getCurrentFrame()->kf->trackCoverage)
         statsTracker->markBranchVisited(branches.first, branches.second);
 
       if (branches.first)
@@ -3136,14 +3143,10 @@ const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const Execut
     Instruction ** lastInstruction) {
   // unroll the stack of the applications state and find
   // the last instruction which is not inside a KLEE internal function
-  ExecutionState::stack_ty::const_reverse_iterator it = state.stack.rbegin(),
-      itE = state.stack.rend();
-
-  // don't check beyond the outermost function (i.e. main())
-  itE--;
+  const auto *currentFrame = state.getCurrentFrame();
 
   const InstructionInfo * ii = 0;
-  if (kmodule->internalFunctions.count(it->kf->function) == 0){
+  if (kmodule->internalFunctions.count(currentFrame->kf->function) == 0) {
     ii =  state.prevPC->info;
     *lastInstruction = state.prevPC->inst;
     //  Cannot return yet because even though
@@ -3154,16 +3157,21 @@ const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const Execut
   // Wind up the stack and check if we are in a KLEE internal function.
   // We visit the entire stack because we want to return a CallInstruction
   // that was not reached via any KLEE internal functions.
-  for (;it != itE; ++it) {
+  for (; currentFrame != nullptr;
+       currentFrame = currentFrame->parentFrame.get()) {
+    // Check if outermost frame is reached
+    if (currentFrame->parentFrame.isNull())
+      break;
+
     // check calling instruction and if it is contained in a KLEE internal function
-    const Function * f = (*it->caller).inst->getParent()->getParent();
+    const Function *f = (*currentFrame->caller).inst->getParent()->getParent();
     if (kmodule->internalFunctions.count(f)){
       ii = 0;
       continue;
     }
     if (!ii){
-      ii = (*it->caller).info;
-      *lastInstruction = (*it->caller).inst;
+      ii = (*currentFrame->caller).info;
+      *lastInstruction = (*currentFrame->caller).inst;
     }
   }
 
@@ -3433,7 +3441,7 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   // matter because all we use this list for is to unbind the object
   // on function return.
   if (isLocal)
-    state.stack.back().allocas.push_back(mo);
+    state.getOwnStackFrame().allocas.push_back(mo);
 
   return os;
 }

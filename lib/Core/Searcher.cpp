@@ -212,7 +212,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return inv * inv;
   }
   case CPInstCount: {
-    StackFrame &sf = es->stack.back();
+    const StackFrame &sf = *es->getCurrentFrame();
     uint64_t count = sf.callPathNode->statistics.getValue(stats::instructions);
     double inv = 1. / std::max((uint64_t) 1, count);
     return inv;
@@ -223,8 +223,8 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
                : 1. / es->solverMetaData.queryCost.toSeconds();
   case CoveringNew:
   case MinDistToUncovered: {
-    uint64_t md2u = computeMinDistToUncovered(es->pc,
-                                              es->stack.back().minDistToUncoveredOnReturn);
+    uint64_t md2u = computeMinDistToUncovered(
+        es->pc, es->getCurrentFrame()->minDistToUncoveredOnReturn);
 
     double invMD2U = 1. / (md2u ? md2u : 10000);
     if (type==CoveringNew) {
