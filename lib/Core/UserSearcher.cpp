@@ -84,7 +84,7 @@ bool klee::userSearcherRequiresMD2U() {
 Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   Searcher *searcher = NULL;
   switch (type) {
-  case Searcher::DFS: searcher = new DFSSearcher(); break;
+  case Searcher::DFS: searcher = new DFSSearcher(executor); break;
   case Searcher::BFS: searcher = new BFSSearcher(); break;
   case Searcher::RandomState: searcher = new RandomSearcher(); break;
   case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;

@@ -89,6 +89,7 @@ class Executor : public Interpreter {
   friend class StatsTracker;
   friend class MergeHandler;
   friend class MergingSearcher;
+  friend class DFSSearcher;
 
 public:
   class Timer {

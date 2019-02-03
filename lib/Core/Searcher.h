@@ -85,16 +85,18 @@ namespace klee {
 
   class DFSSearcher : public Searcher {
     std::vector<ExecutionState*> states;
+    Executor& executor;
 
   public:
     ExecutionState &selectState();
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return states.empty(); }
+    bool empty();
     void printName(llvm::raw_ostream &os) {
       os << "DFSSearcher\n";
     }
+    DFSSearcher(Executor& e):executor(e) {}
   };
 
   class BFSSearcher : public Searcher {
