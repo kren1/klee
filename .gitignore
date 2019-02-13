@@ -35,3 +35,4 @@ autom4te.cache/
 .cproject
 .idea
 *.swp
+buildIntConstraint/*
