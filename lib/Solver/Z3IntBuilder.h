@@ -105,34 +105,14 @@ class Z3IntBuilder {
   Z3ArrayExprHash _arr_hash;
 
 private:
-  Z3ASTHandle bvOne(unsigned width);
-  Z3ASTHandle bvZero(unsigned width);
-  Z3ASTHandle bvMinusOne(unsigned width);
-  Z3ASTHandle bvConst32(unsigned width, uint32_t value);
   Z3ASTHandle intConst(int64_t value);
-  Z3ASTHandle bvConst64(unsigned width, uint64_t value);
-  Z3ASTHandle bvZExtConst(unsigned width, uint64_t value);
-  Z3ASTHandle bvSExtConst(unsigned width, uint64_t value);
-  Z3ASTHandle bvBoolExtract(Z3ASTHandle expr, int bit);
-  Z3ASTHandle bvExtract(Z3ASTHandle expr, unsigned top, unsigned bottom);
   Z3ASTHandle eqExpr(Z3ASTHandle a, Z3ASTHandle b);
 
   // logical left and right shift (not arithmetic)
-  Z3ASTHandle bvLeftShift(Z3ASTHandle expr, unsigned shift);
-  Z3ASTHandle bvRightShift(Z3ASTHandle expr, unsigned shift);
-  Z3ASTHandle bvVarLeftShift(Z3ASTHandle expr, Z3ASTHandle shift);
-  Z3ASTHandle bvVarRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
-  Z3ASTHandle bvVarArithRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
-
   Z3ASTHandle notExpr(Z3ASTHandle expr);
-  Z3ASTHandle bvNotExpr(Z3ASTHandle expr);
   Z3ASTHandle andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width);
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,
@@ -142,19 +122,6 @@ private:
   // ITE-expression constructor
   Z3ASTHandle iteExpr(Z3ASTHandle condition, Z3ASTHandle whenTrue,
                       Z3ASTHandle whenFalse);
-
-  // Bitvector length
-  unsigned getBVLength(Z3ASTHandle expr);
-
-  // Bitvector comparison
-  Z3ASTHandle bvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle sbvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-
-  Z3ASTHandle constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
-                                      Z3ASTHandle isSigned);
-
   Z3ASTHandle getInitialArray(const Array *os);
   Z3ASTHandle getArrayForUpdate(const Array *root, const UpdateNode *un);
 
@@ -164,7 +131,6 @@ private:
   Z3ASTHandle buildArray(const char *name, unsigned indexWidth,
                          unsigned valueWidth);
 
-  Z3SortHandle getBvSort(unsigned width);
   Z3SortHandle getIntSort();
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
   bool autoClearConstructCache;
