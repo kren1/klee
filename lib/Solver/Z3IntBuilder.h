@@ -105,7 +105,8 @@ class Z3IntBuilder {
   Z3ArrayExprHash _arr_hash;
 
 private:
-  Z3ASTHandle intConst(int64_t value);
+  Z3ASTHandle uIntConst(uint64_t value);
+  Z3ASTHandle sIntConst(int64_t value);
   Z3ASTHandle eqExpr(Z3ASTHandle a, Z3ASTHandle b);
 
   // logical left and right shift (not arithmetic)
