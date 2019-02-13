@@ -9,6 +9,7 @@
 
 #include "STPSolver.h"
 #include "Z3Solver.h"
+#include "Z3IntSolver.h"
 #include "MetaSMTSolver.h"
 #include "klee/SolverCmdLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
@@ -42,7 +43,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
     klee_message("Using Z3 solver backend");
-    return new Z3Solver();
+    return new Z3IntSolver();
 #else
     klee_message("Not compiled with Z3 support");
     return NULL;
