@@ -366,8 +366,12 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Concat: {
     auto re = hasOrderedReads(e, -1);
     assert(re && "Int Solver can't handle non ordered reads");
+    *width_out = 32;
+    auto stride = re->updates.root->valueType / 8;
+    assert(stride > 0 && "can;t concatnact for unknwon array type");
+    ref<Expr> index = UDivExpr::create(re->index, ConstantExpr::create(stride, re->index->getWidth()));
     return readExpr(getArrayForUpdate(re->updates.root, re->updates.head),
-                    construct(re->index, 0));
+                    construct(index, 0));
  
   }
 
