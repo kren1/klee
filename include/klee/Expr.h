@@ -490,6 +490,8 @@ public:
   /// Range is the size (in bits) of the number stored there (array of bytes -> 8)
   const Expr::Width domain, range;
 
+  Expr::Width valueType = Expr::InvalidWidth;
+
   /// constantValues - The constant initial values for this array, or empty for
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.

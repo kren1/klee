@@ -67,6 +67,22 @@ MemoryObject::~MemoryObject() {
   if (parent)
     parent->markFreed(this);
 }
+Expr::Width MemoryObject::getValueType() const {
+      if(allocSite && allocSite->getType()->isPointerTy()) {
+          allocSite->dump();
+          auto typ = dyn_cast<PointerType>(allocSite->getType())->getElementType();
+          if(typ->isIntegerTy()) {
+            switch(typ->getPrimitiveSizeInBits()) {
+                case 8: return Expr::Int8;
+                case 16: return Expr::Int16;
+                case 32: return Expr::Int32;
+                case 64: return Expr::Int64;
+                default:;
+            }
+          }
+      }
+      return Expr::InvalidWidth;
+}
 
 void MemoryObject::getAllocInfo(std::string &result) const {
   llvm::raw_string_ostream info(result);
@@ -106,8 +122,8 @@ ObjectState::ObjectState(const MemoryObject *mo)
   mo->refCount++;
   if (!UseConstantArrays) {
     static unsigned id = 0;
-    const Array *array =
-        getArrayCache()->CreateArray("tmp_arr" + llvm::utostr(++id), size);
+    const Array *array = getArrayCache()->CreateArray("tmp_arr" + llvm::utostr(++id), size, mo->getValueType());
+
     updates = UpdateList(array, 0);
   }
   memset(concreteStore, 0, size);
@@ -217,7 +233,7 @@ const UpdateList &ObjectState::getUpdates() const {
 
     static unsigned id = 0;
     const Array *array = getArrayCache()->CreateArray(
-        "const_arr" + llvm::utostr(++id), size, &Contents[0],
+        "const_arr" + llvm::utostr(++id), size, object->getValueType(), &Contents[0],
         &Contents[0] + Contents.size());
     updates = UpdateList(array, 0);
 

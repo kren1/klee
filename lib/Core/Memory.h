@@ -109,6 +109,9 @@ public:
     this->name = name;
   }
 
+  Expr::Width getValueType() const;
+
+
   ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }

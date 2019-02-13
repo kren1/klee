@@ -167,14 +167,19 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
 
     if (root->isConstantArray() && constant_array_assertions.count(root) == 0) {
       std::vector<Z3ASTHandle> array_assertions;
-      for (unsigned i = 0, e = root->size; i != e; ++i) {
+      assert(root->valueType != Expr::InvalidWidth && "Int solver can't deal with unknown type constant arrays");
+      unsigned byteStride = root->valueType / 8;
+      for (unsigned i = 0, e = (root->size / byteStride); i != e; ++i) {
         // construct(= (select i root) root->value[i]) to be asserted in
         // Z3Solver.cpp
         int width_out;
-        Z3ASTHandle array_value =
-            construct(root->constantValues[i], &width_out);
-        assert(width_out == (int)root->getRange() &&
-               "Value doesn't match root range");
+
+        auto init = root->constantValues[i];
+        for(int j = 1; j < byteStride; j++) {
+            init->Concat(root->constantValues[i + j]);
+        }
+
+        Z3ASTHandle array_value = construct(init, &width_out);
         array_assertions.push_back(
             eqExpr(readExpr(array_expr, intConst(i)),
                    array_value));
