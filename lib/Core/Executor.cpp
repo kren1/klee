@@ -3421,7 +3421,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   static unsigned id;
   const Array *array =
       arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
-                             Expr::getMinBytesForWidth(e->getWidth()));
+                             Expr::getMinBytesForWidth(e->getWidth()), Expr::InvalidWidth);
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
@@ -3769,7 +3769,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     // or if that fails try adding a unique identifier.
     std::string uniqueName =
         name + "_" + llvm::utostr(state.arrayCntr++);
-    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->size, mo->getValueType());
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     

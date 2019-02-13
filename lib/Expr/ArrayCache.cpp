@@ -17,13 +17,15 @@ ArrayCache::~ArrayCache() {
 }
 
 const Array *
-ArrayCache::CreateArray(const std::string &_name, uint64_t _size,
+ArrayCache::CreateArray(const std::string &_name, uint64_t _size, Expr::Width valueType,
                         const ref<ConstantExpr> *constantValuesBegin,
                         const ref<ConstantExpr> *constantValuesEnd,
                         Expr::Width _domain, Expr::Width _range) {
 
-  const Array *array = new Array(_name, _size, constantValuesBegin,
+  Array *arr = new Array(_name, _size, constantValuesBegin,
                                  constantValuesEnd, _domain, _range);
+  arr->valueType = valueType;
+  const Array *array = arr;
   if (array->isSymbolicArray()) {
     std::pair<ArrayHashMap::const_iterator, bool> success =
         cachedSymbolicArrays.insert(array);

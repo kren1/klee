@@ -523,10 +523,10 @@ DeclResult ParserImpl::ParseArrayDecl() {
   const Identifier *Label = GetOrCreateIdentifier(Name);
   const Array *Root;
   if (!Values.empty())
-    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), &Values[0],
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), Expr::InvalidWidth,  &Values[0],
                                      &Values[0] + Values.size());
   else
-    Root = TheArrayCache.CreateArray(Label->Name, Size.get());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), Expr::InvalidWidth);
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
@@ -1319,7 +1319,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   if (!Res.isValid()) {
     // FIXME: I'm not sure if this is right. Do we need a unique array here?
     Res =
-        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
+        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0, Expr::InvalidWidth), NULL));
   }
   
   if (Label)

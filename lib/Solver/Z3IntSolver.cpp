@@ -337,11 +337,14 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                                                     ie = objects->end();
          it != ie; ++it) {
       const Array *array = *it;
+      llvm::errs() << "Array type: " << array->valueType << "\n";
+      assert(array->valueType != Expr::InvalidWidth && "Int solver needs value type");
+      unsigned byteStride = array->valueType / 8;
       std::vector<unsigned char> data;
 
       data.reserve(array->size);
       //TODO: hack for 4 byte ints!
-      for (unsigned offset = 0; offset < (array->size / 4); offset++) {
+      for (unsigned offset = 0; offset < (array->size / byteStride); offset++) {
         // We can't use Z3ASTHandle here so have to do ref counting manually
         ::Z3_ast arrayElementExpr;
         Z3ASTHandle initial_read = builder->getInitialRead(array, offset);
@@ -356,16 +359,14 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                    Z3_NUMERAL_AST &&
                "Evaluated expression has wrong sort");
 
-        int arrayElementValue = 0;
+        long long int arrayElementValue = 0;
         __attribute__((unused))
-        bool successGet = Z3_get_numeral_int(builder->ctx, arrayElementExpr,
+        bool successGet = Z3_get_numeral_int64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
         assert(successGet && "failed to get value back");
         uint8_t *p = (uint8_t*)&arrayElementValue;
-        data.push_back(p[0]);
-        data.push_back(p[1]);
-        data.push_back(p[2]);
-        data.push_back(p[3]);
+        for(unsigned j = 0; j < byteStride; j++)
+          data.push_back(p[j]);
         Z3_dec_ref(builder->ctx, arrayElementExpr);
       }
       values->push_back(data);
