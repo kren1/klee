@@ -5,6 +5,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define N 7
+
 static void insert_ordered(int *array, unsigned nelem, int item) {
   unsigned i = 0;
 
@@ -52,11 +54,11 @@ void test(int *array, unsigned nelem) {
   printf("input: [%d, %d, %d, %d]\n",
          array[0], array[1], array[2], array[3]);
 
-  memcpy(temp1, array, sizeof(*array) * 4);
-  memcpy(temp2, array, sizeof(*array) * 4);
+  memcpy(temp1, array, sizeof(*array) * nelem);
+  memcpy(temp2, array, sizeof(*array) * nelem);
 
-  insertion_sort(temp1, 4);
-  bubble_sort(temp2, 4);
+  insertion_sort(temp1, nelem);
+  bubble_sort(temp2, nelem);
 
   printf("insertion_sort: [%d, %d, %d, %d]\n",
          temp1[0], temp1[1], temp1[2], temp1[3]);
@@ -72,10 +74,10 @@ void test(int *array, unsigned nelem) {
 }
 
 int main() {
-  int input[4] = { 4, 3, 2, 1};
+  int input[N];
 
   klee_make_symbolic(&input, sizeof(input), "input");
-  test(input, 4);
+  test(input, N);
 
   return 0;
 }
