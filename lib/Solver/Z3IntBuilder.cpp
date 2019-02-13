@@ -99,7 +99,12 @@ Z3ASTHandle Z3IntBuilder::getTrue() { return Z3ASTHandle(Z3_mk_true(ctx), ctx); 
 
 Z3ASTHandle Z3IntBuilder::getFalse() { return Z3ASTHandle(Z3_mk_false(ctx), ctx); }
 
-Z3ASTHandle Z3IntBuilder::intConst(int64_t value) {
+Z3ASTHandle Z3IntBuilder::uIntConst(uint64_t value) {
+  Z3SortHandle t = getIntSort();
+  return Z3ASTHandle(Z3_mk_unsigned_int64(ctx, value, t), ctx);
+}
+
+Z3ASTHandle Z3IntBuilder::sIntConst(int64_t value) {
   Z3SortHandle t = getIntSort();
   return Z3ASTHandle(Z3_mk_int64(ctx, value, t), ctx);
 }
@@ -181,7 +186,7 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
 
         Z3ASTHandle array_value = construct(init, &width_out);
         array_assertions.push_back(
-            eqExpr(readExpr(array_expr, intConst(i)),
+            eqExpr(readExpr(array_expr, uIntConst(i)),
                    array_value));
       }
       constant_array_assertions[root] = std::move(array_assertions);
@@ -194,7 +199,7 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
 }
 
 Z3ASTHandle Z3IntBuilder::getInitialRead(const Array *root, unsigned index) {
-  return readExpr(getInitialArray(root), intConst(index));
+  return readExpr(getInitialArray(root), uIntConst(index));
 }
 
 Z3ASTHandle Z3IntBuilder::getArrayForUpdate(const Array *root,
@@ -295,6 +300,19 @@ const ReadExpr* Z3IntBuilder::hasOrderedReads(ref<Expr> e, int stride) {
 
 
 
+class SignHandler {
+    bool old;
+    static bool sign_int;
+public:
+    SignHandler(bool val): old(sign_int){
+        sign_int  = val;
+    }
+    ~SignHandler() {
+        sign_int = old;
+    }
+    static bool isSign() { return sign_int; }
+};
+bool SignHandler::sign_int = false;
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
@@ -313,11 +331,14 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
     if (*width_out == 1)
       return CE->isTrue() ? getTrue() : getFalse();
 
+    assert(*width_out <= 64 && "Unangled bigger than 64 bit wide constants");
     // Fast path.
-    if (*width_out <= 64)
-      return intConst((int64_t)CE->getZExtValue());
+    //Can't use the sign here, because the equality (and maybe other operations)will still be unsigned.
+    if (false && SignHandler::isSign())
+      return sIntConst(CE->getAPValue().getSExtValue());
+    else
+      return uIntConst(CE->getZExtValue());
 
-    assert(0 && "Unangled bigger than 64 bit wide constants");
   }
 
   // Special
@@ -357,8 +378,9 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   // Casting
   case Expr::ZExt: 
   case Expr::SExt: {
-    int srcWidth;
+    SignHandler sh(e->getKind() == Expr::SExt);
     CastExpr *ce = cast<CastExpr>(e);
+    int srcWidth;
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
     return src;
@@ -397,6 +419,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::UDiv: 
   case Expr::SDiv: {
+    SignHandler sh(e->getKind() == Expr::SDiv);
     SDivExpr *de = cast<SDivExpr>(e);
     Z3ASTHandle left = construct(de->left, width_out);
     assert(*width_out != 1 && "uncanonicalized sdiv");
@@ -407,6 +430,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::URem: 
   case Expr::SRem: {
+    SignHandler sh(e->getKind() == Expr::SRem);
     SRemExpr *de = cast<SRemExpr>(e);
     Z3ASTHandle left = construct(de->left, width_out);
     Z3ASTHandle right = construct(de->right, width_out);
@@ -492,6 +516,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Ult: 
   case Expr::Slt: {
+    SignHandler sh(e->getKind() == Expr::Slt);
     SltExpr *se = cast<SltExpr>(e);
     Z3ASTHandle left = construct(se->left, width_out);
     Z3ASTHandle right = construct(se->right, width_out);
@@ -502,6 +527,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Ule: 
   case Expr::Sle: {
+    SignHandler sh(e->getKind() == Expr::Sle);
     SleExpr *se = cast<SleExpr>(e);
     Z3ASTHandle left = construct(se->left, width_out);
     Z3ASTHandle right = construct(se->right, width_out);
