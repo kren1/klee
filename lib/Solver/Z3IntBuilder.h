@@ -18,6 +18,7 @@
 
 namespace klee {
 
+
 template <typename T> class Z3NodeHandle {
   // Internally these Z3 types are pointers
   // so storing these should be cheap.
@@ -150,7 +151,6 @@ public:
   Z3ASTHandle getInitialRead(const Array *os, unsigned index);
 
   Z3ASTHandle construct(ref<Expr> e) {
-    e->dump();
     Z3ASTHandle res = construct(e, 0);
     if (autoClearConstructCache)
       clearConstructCache();

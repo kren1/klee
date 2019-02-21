@@ -14,11 +14,12 @@
 #include "klee/Solver.h"
 
 namespace klee {
-/// Z3IntSolver - A complete solver based on Z3
+/// Z3IntSolver - A partial int solver based on Z3
 class Z3IntSolver : public Solver {
+  Solver* coreSolver;
 public:
   /// Z3IntSolver - Construct a new Z3IntSolver.
-  Z3IntSolver();
+  Z3IntSolver(Solver* s);
 
   /// Get the query in SMT-LIBv2 format.
   /// \return A C-style string. The caller is responsible for freeing this.

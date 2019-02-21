@@ -15,6 +15,7 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/System/Time.h"
 #include "llvm/Support/raw_ostream.h"
+#include "../Solver/Z3IntSolver.h"
 
 
 namespace klee {
@@ -37,6 +38,9 @@ Solver *constructSolverChain(Solver *coreSolver,
     klee_message("Logging queries that reach solver in .smt2 format to %s\n",
                  baseSolverQuerySMT2LogPath.c_str());
   }
+
+  if(true)
+    solver = new Z3IntSolver(solver);
 
   if (UseAssignmentValidatingSolver)
     solver = createAssignmentValidatingSolver(solver);
