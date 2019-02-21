@@ -43,10 +43,43 @@ llvm::cl::opt<unsigned>
 #include "llvm/Support/ErrorHandling.h"
 
 namespace klee {
+class IsIntExpr : public ExprVisitor {
+  int isIntExpr = true;
+  Action no() {
+      isIntExpr = false;
+      return Action::skipChildren();
+    }
+  protected:
+      
+    Action visitXor(const XorExpr&) { return no(); }
+    Action visitShl(const ShlExpr&) { return no(); }
+    Action visitLShr(const LShrExpr&) { return no(); }
+    Action visitAShr(const AShrExpr&) { return no(); }
+      
+    explicit operator bool() const { return isIntExpr; }
+    IsIntExpr() {}
+    void reset() {isIntExpr = true;}
+  public:
+    static bool isIntQuery(const Query& q) {
+        IsIntExpr isInt;
+        isInt.visit(q.expr);
+        if(!isInt) return false;
+        isInt.reset();
+        for(auto &e : q.constraints) {
+            isInt.visit(e);
+            if(!isInt) return false;
+            isInt.reset();
+        }
+        return true;
+        
+    }
+};
 
+ 
 class Z3IntSolverImpl : public SolverImpl {
 private:
   Z3IntBuilder *builder;
+  Solver* coreSolver;
   time::Span timeout;
   SolverRunStatus runStatusCode;
   std::unique_ptr<llvm::raw_fd_ostream> dumpedQueriesFile;
@@ -61,7 +94,7 @@ private:
   bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
 
 public:
-  Z3IntSolverImpl();
+  Z3IntSolverImpl(Solver *s);
   ~Z3IntSolverImpl();
 
   char *getConstraintLog(const Query &);
@@ -89,12 +122,12 @@ public:
   SolverRunStatus getOperationStatusCode();
 };
 
-Z3IntSolverImpl::Z3IntSolverImpl()
+Z3IntSolverImpl::Z3IntSolverImpl(Solver *s)
     : builder(new Z3IntBuilder(
           /*autoClearConstructCache=*/false,
           /*z3LogInteractionFileArg=*/Z3LogInteractionFile.size() > 0
               ? Z3LogInteractionFile.c_str()
-              : NULL)),
+              : NULL)), coreSolver(s),
       runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(builder && "unable to create Z3IntBuilder");
   solverParameters = Z3_mk_params(builder->ctx);
@@ -127,7 +160,7 @@ Z3IntSolverImpl::~Z3IntSolverImpl() {
   delete builder;
 }
 
-Z3IntSolver::Z3IntSolver() : Solver(new Z3IntSolverImpl()) {}
+Z3IntSolver::Z3IntSolver(Solver *s) : Solver(new Z3IntSolverImpl(s)), coreSolver(s) {}
 
 char *Z3IntSolver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
@@ -238,6 +271,11 @@ bool Z3IntSolverImpl::computeInitialValues(
 bool Z3IntSolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+
+  if(!IsIntExpr::isIntQuery(query)) {
+    llvm::errs() << "Int failed, falling back to coreSolver\n";
+    return coreSolver->impl->computeInitialValues(query, *objects, *values, hasSolution);
+  }
 
   TimerStatIncrementer t(stats::queryTime);
   // NOTE: Z3 will switch to using a slower solver internally if push/pop are
