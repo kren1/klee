@@ -55,6 +55,7 @@ class IsIntExpr : public ExprVisitor {
     Action visitShl(const ShlExpr&) { return no(); }
     Action visitLShr(const LShrExpr&) { return no(); }
     Action visitAShr(const AShrExpr&) { return no(); }
+    Action visitExtract(const AShrExpr&) { return no(); }
       
     explicit operator bool() const { return isIntExpr; }
     IsIntExpr() {}
