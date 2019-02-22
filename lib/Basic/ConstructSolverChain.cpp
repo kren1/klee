@@ -15,10 +15,16 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/System/Time.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 #include "../Solver/Z3IntSolver.h"
 
 
 namespace klee {
+  llvm::cl::opt<bool>
+  IsInt("use-int-solver",
+            llvm::cl::init(false),
+			      llvm::cl::desc("Try to use z3 int solver first (default=off)."));
+ 
 Solver *constructSolverChain(Solver *coreSolver,
                              std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
@@ -39,7 +45,7 @@ Solver *constructSolverChain(Solver *coreSolver,
                  baseSolverQuerySMT2LogPath.c_str());
   }
 
-  if(true)
+  if(IsInt)
     solver = new Z3IntSolver(solver);
 
   if (UseAssignmentValidatingSolver)
