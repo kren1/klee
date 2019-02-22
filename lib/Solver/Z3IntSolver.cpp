@@ -398,7 +398,7 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                    Z3_NUMERAL_AST &&
                "Evaluated expression has wrong sort");
 
-        long long int arrayElementValue = 0;
+        __int64 arrayElementValue = 0;
         __attribute__((unused))
         bool successGet = Z3_get_numeral_int64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
