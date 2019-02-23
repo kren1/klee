@@ -349,6 +349,9 @@ bool Z3IntSolverImpl::internalRunSolver(
   ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        hasSolution);
+  if(runStatusCode == SolverImpl::SOLVER_RUN_STATUS_FAILURE) {
+     return coreSolver->impl->computeInitialValues(query, *objects, *values, hasSolution);
+  }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
   // Clear the builder's cache to prevent memory usage exploding.
@@ -417,6 +420,11 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
         __attribute__((unused))
         bool successGet = Z3_get_numeral_int64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
+        if(successGet) {
+            klee_warning("Failed to get value back");
+
+            return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
+        }
         assert(successGet && "failed to get value back");
         uint8_t *p = (uint8_t*)&arrayElementValue;
         for(unsigned j = 0; j < byteStride; j++)
