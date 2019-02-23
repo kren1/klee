@@ -56,7 +56,22 @@ class IsIntExpr : public ExprVisitor {
     Action visitLShr(const LShrExpr&) { return no(); }
     Action visitAShr(const AShrExpr&) { return no(); }
     Action visitExtract(const ExtractExpr&) { return no(); }
-      
+    Action visitAnd(const AndExpr& e) { 
+      if(e.right->getWidth() != Expr::Bool)
+        return no(); 
+      return Action::doChildren();
+    }
+    Action visitOr(const OrExpr& e) { 
+      if(e.right->getWidth() != Expr::Bool)
+        return no(); 
+      return Action::doChildren();
+    }
+    Action visitNot(const NotExpr& e) { 
+      if(e.expr->getWidth() != Expr::Bool)
+        return no(); 
+      return Action::doChildren();
+    }     
+
     explicit operator bool() const { return isIntExpr; }
     IsIntExpr() {}
     void reset() {isIntExpr = true;}
