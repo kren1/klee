@@ -424,7 +424,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::UDiv: 
   case Expr::SDiv: {
     SignHandler sh(e->getKind() == Expr::SDiv);
-    SDivExpr *de = cast<SDivExpr>(e);
+    BinaryExpr*de = cast<BinaryExpr>(e);
     Z3ASTHandle left = construct(de->left, width_out);
     assert(*width_out != 1 && "uncanonicalized sdiv");
     Z3ASTHandle right = construct(de->right, width_out);
@@ -435,7 +435,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::URem: 
   case Expr::SRem: {
     SignHandler sh(e->getKind() == Expr::SRem);
-    SRemExpr *de = cast<SRemExpr>(e);
+    BinaryExpr*de = cast<BinaryExpr>(e);
     Z3ASTHandle left = construct(de->left, width_out);
     Z3ASTHandle right = construct(de->right, width_out);
     assert(*width_out != 1 && "uncanonicalized srem");
@@ -521,7 +521,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Ult: 
   case Expr::Slt: {
     SignHandler sh(e->getKind() == Expr::Slt);
-    SltExpr *se = cast<SltExpr>(e);
+    BinaryExpr *se = cast<BinaryExpr>(e);
     Z3ASTHandle left = construct(se->left, width_out);
     Z3ASTHandle right = construct(se->right, width_out);
     assert(*width_out != 1 && "uncanonicalized slt");
@@ -532,7 +532,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Ule: 
   case Expr::Sle: {
     SignHandler sh(e->getKind() == Expr::Sle);
-    SleExpr *se = cast<SleExpr>(e);
+    BinaryExpr*se = cast<BinaryExpr>(e);
     Z3ASTHandle left = construct(se->left, width_out);
     Z3ASTHandle right = construct(se->right, width_out);
     assert(*width_out != 1 && "uncanonicalized sle");
