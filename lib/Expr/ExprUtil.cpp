@@ -116,6 +116,8 @@ ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
 
   if (ul.root->isConstantArray()) {
     results.insert(ul.root);
+  } else {
+      symbolicArrays.insert(ul.root);
   }
 
   return Action::doChildren();

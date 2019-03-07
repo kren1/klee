@@ -51,11 +51,11 @@ class IsIntExpr : public ExprVisitor {
     }
   protected:
       
-    Action visitXor(const XorExpr&) { return no(); }
-    Action visitShl(const ShlExpr&) { return no(); }
-    Action visitLShr(const LShrExpr&) { return no(); }
-    Action visitAShr(const AShrExpr&) { return no(); }
-    Action visitExtract(const AShrExpr&) { return no(); }
+    Action visitXor(const XorExpr&) override { return no(); }
+    Action visitShl(const ShlExpr&) override { return no(); }
+    Action visitLShr(const LShrExpr&) override { return no(); }
+    Action visitAShr(const AShrExpr&) override { return no(); }
+    Action visitExtract(const ExtractExpr&) override { return no(); }
       
     explicit operator bool() const { return isIntExpr; }
     IsIntExpr() {}
@@ -204,7 +204,14 @@ char *Z3IntSolverImpl::getConstraintLog(const Query &query) {
       assumptions.push_back(arrayIndexValueExpr);
     }
   }
-
+  for (auto const &sym_array : constant_arrays_in_query.symbolicArrays) {
+    assert(builder->constant_array_assertions.count(sym_array) == 1 &&
+           "symbolic array found in query, but not handled by Z3IntBuilder");
+    for (auto const &arrayIndexValueExpr :
+         builder->constant_array_assertions[sym_array]) {
+      assumptions.push_back(arrayIndexValueExpr);
+    }
+  }
   ::Z3_ast *assumptionsArray = NULL;
   int numAssumptions = assumptions.size();
   if (numAssumptions) {
@@ -313,6 +320,14 @@ bool Z3IntSolverImpl::internalRunSolver(
     }
   }
 
+  for (auto const &sym_array : constant_arrays_in_query.symbolicArrays) {
+    assert(builder->constant_array_assertions.count(sym_array) == 1 &&
+           "symbolic array found in query, but not handled by Z3IntBuilder");
+    for (auto const &arrayIndexValueExpr :
+         builder->constant_array_assertions[sym_array]) {
+      Z3_solver_assert(builder->ctx, theSolver, arrayIndexValueExpr);
+    }
+  }
   // KLEE Queries are validity queries i.e.
   // ∀ X Constraints(X) → query(X)
   // but Z3 works in terms of satisfiability so instead we ask the
@@ -376,13 +391,12 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                                                     ie = objects->end();
          it != ie; ++it) {
       const Array *array = *it;
-      llvm::errs() << "Array type: " << array->valueType << "\n";
+//      llvm::errs() << "Array type: " << array->valueType << "\n";
       assert(array->valueType != Expr::InvalidWidth && "Int solver needs value type");
       unsigned byteStride = array->valueType / 8;
       std::vector<unsigned char> data;
 
       data.reserve(array->size);
-      //TODO: hack for 4 byte ints!
       for (unsigned offset = 0; offset < (array->size / byteStride); offset++) {
         // We can't use Z3ASTHandle here so have to do ref counting manually
         ::Z3_ast arrayElementExpr;
@@ -398,12 +412,14 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                    Z3_NUMERAL_AST &&
                "Evaluated expression has wrong sort");
 
-        __int64 arrayElementValue = 0;
+        __uint64 arrayElementValue = 0;
         __attribute__((unused))
-        bool successGet = Z3_get_numeral_int64(builder->ctx, arrayElementExpr,
+        bool successGet = Z3_get_numeral_uint64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
         assert(successGet && "failed to get value back");
+        assert(arrayElementValue <= 1 << byteStride*8 && "Got value back that doesn't fit");
         uint8_t *p = (uint8_t*)&arrayElementValue;
+        //llvm::errs() << array->name << "->" << arrayElementValue << " bs:" << byteStride  << " p:" << (int)*p <<"\n";
         for(unsigned j = 0; j < byteStride; j++)
           data.push_back(p[j]);
         Z3_dec_ref(builder->ctx, arrayElementExpr);

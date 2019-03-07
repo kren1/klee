@@ -68,7 +68,7 @@ Expr::Width extractType(Type* type, int level = 0) {
 
 Expr::Width MemoryObject::getValueType() const {
   if(!allocSite) return Expr::InvalidWidth;  
-  allocSite->dump();
+//  allocSite->dump();
 
   return extractType(allocSite->getType());
 }

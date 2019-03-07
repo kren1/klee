@@ -1,6 +1,6 @@
 
 #COMMON_FLAGS:=-external-calls=all -solver-backend=z3 -use-cex-cache=false -only-output-states-covering-new
-COMMON_FLAGS:=-external-calls=all -solver-backend=z3 -only-output-states-covering-new
+COMMON_FLAGS:=-external-calls=all -solver-backend=z3 -output-states-covering-new
 PREFIX:=
 all: $(PREFIX)klee-out-int $(PREFIX)klee-out-normal
 $(PREFIX)klee-out-int: srt.bc
