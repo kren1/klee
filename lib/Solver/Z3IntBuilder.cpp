@@ -113,6 +113,14 @@ Z3ASTHandle Z3IntBuilder::eqExpr(Z3ASTHandle a, Z3ASTHandle b) {
   return Z3ASTHandle(Z3_mk_eq(ctx, a, b), ctx);
 }
 
+Z3ASTHandle Z3IntBuilder::geExpr(Z3ASTHandle a, Z3ASTHandle b) {
+  return Z3ASTHandle(Z3_mk_ge(ctx, a, b), ctx);
+}
+
+Z3ASTHandle Z3IntBuilder::ltExpr(Z3ASTHandle a, Z3ASTHandle b) {
+  return Z3ASTHandle(Z3_mk_lt(ctx, a, b), ctx);
+}
+
 Z3ASTHandle Z3IntBuilder::notExpr(Z3ASTHandle expr) {
   return Z3ASTHandle(Z3_mk_not(ctx, expr), ctx);
 }
@@ -185,9 +193,21 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
         }
 
         Z3ASTHandle array_value = construct(init, &width_out);
-        array_assertions.push_back(
-            eqExpr(readExpr(array_expr, uIntConst(i)),
-                   array_value));
+        auto rExpr = readExpr(array_expr, uIntConst(i)); 
+
+        array_assertions.push_back(eqExpr(rExpr, array_value));
+      }
+      constant_array_assertions[root] = std::move(array_assertions);
+
+    } else if (!root->isConstantArray()) {
+      assert(root->valueType != Expr::InvalidWidth && "Int solver can't deal with unknown type symbolic arrays");
+      std::vector<Z3ASTHandle> array_assertions;
+
+      unsigned byteStride = root->valueType / 8;
+      for (unsigned i = 0, e = (root->size / byteStride); i != e; ++i) {
+        auto rExpr = readExpr(array_expr, uIntConst(i)); 
+        array_assertions.push_back(geExpr(rExpr, uIntConst(0)));
+        array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << root->valueType)));
       }
       constant_array_assertions[root] = std::move(array_assertions);
     }
