@@ -204,10 +204,18 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
       std::vector<Z3ASTHandle> array_assertions;
 
       unsigned byteStride = root->valueType / 8;
+//      llvm::errs() << root->name << ":" << root->valueType << "\n";
       for (unsigned i = 0, e = (root->size / byteStride); i != e; ++i) {
         auto rExpr = readExpr(array_expr, uIntConst(i)); 
         array_assertions.push_back(geExpr(rExpr, uIntConst(0)));
-        array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << root->valueType)));
+        switch(byteStride) {
+            case 1: array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << 8)));  break;
+            case 2: array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << 16))); break;
+            case 4: array_assertions.push_back(ltExpr(rExpr, uIntConst(std::numeric_limits<uint32_t>::max()))); break;
+            case 8: array_assertions.push_back(ltExpr(rExpr, uIntConst(std::numeric_limits<std::uint64_t>::max()))); break;
+            default: assert(0 && "Invalid byte stride");
+        }
+        
       }
       constant_array_assertions[root] = std::move(array_assertions);
     }

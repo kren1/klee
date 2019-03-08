@@ -431,7 +431,7 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                    Z3_NUMERAL_AST &&
                "Evaluated expression has wrong sort");
 
-        __uint64 arrayElementValue = 0;
+        uint64_t arrayElementValue = 0;
         __attribute__((unused))
         bool successGet = Z3_get_numeral_uint64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
@@ -441,7 +441,13 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
             return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
         }
         assert(successGet && "failed to get value back");
-        assert(arrayElementValue <= 1 << byteStride*8 && "Got value back that doesn't fit");
+        switch(byteStride) {
+            case 1: assert(arrayElementValue <= std::numeric_limits<std::uint8_t>::max()); break;
+            case 2: assert(arrayElementValue <= std::numeric_limits<std::uint16_t>::max()); break;
+            case 4: assert(arrayElementValue <= std::numeric_limits<std::uint32_t>::max()); break;
+            case 8: assert(arrayElementValue <= std::numeric_limits<std::uint64_t>::max()); break;
+            default: assert(0 && "Unknown byte stride");
+        }
         uint8_t *p = (uint8_t*)&arrayElementValue;
         //llvm::errs() << array->name << "->" << arrayElementValue << " bs:" << byteStride  << " p:" << (int)*p <<"\n";
         for(unsigned j = 0; j < byteStride; j++)
