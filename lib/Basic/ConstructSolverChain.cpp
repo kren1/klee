@@ -48,6 +48,9 @@ Solver *constructSolverChain(Solver *coreSolver,
   if(IsInt)
     solver = new Z3IntSolver(solver);
 
+  if (DebugValidateSolver)
+    solver = createValidatingSolver(solver, coreSolver);
+
   if (UseAssignmentValidatingSolver)
     solver = createAssignmentValidatingSolver(solver);
 
@@ -63,8 +66,6 @@ Solver *constructSolverChain(Solver *coreSolver,
   if (UseIndependentSolver)
     solver = createIndependentSolver(solver);
 
-  if (DebugValidateSolver)
-    solver = createValidatingSolver(solver, coreSolver);
 
   if (queryLoggingOptions.isSet(ALL_KQUERY)) {
     solver = createKQueryLoggingSolver(solver, queryKQueryLogPath, minQueryTimeToLog, LogTimedOutQueries);
