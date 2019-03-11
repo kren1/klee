@@ -435,8 +435,8 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
         __attribute__((unused))
         bool successGet = Z3_get_numeral_uint64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
-        if(successGet) {
-            klee_warning("Failed to get value back");
+        if(!successGet) {
+            klee_warning("Failed to get value back %s", Z3_get_numeral_string(builder->ctx, arrayElementExpr));
 
             return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
         }

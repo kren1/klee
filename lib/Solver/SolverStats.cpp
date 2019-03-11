@@ -13,6 +13,8 @@ using namespace klee;
 
 Statistic stats::cexCacheTime("CexCacheTime", "CCtime");
 Statistic stats::queries("Queries", "Q");
+//Statistic stats::z3DelegatedQueries("Z3intDelegate", "Z3iDel");
+//Statistic stats::z3SolvedQueries("Z3intSolved", "Z3iSolved");
 Statistic stats::queriesInvalid("QueriesInvalid", "Qiv");
 Statistic stats::queriesValid("QueriesValid", "Qv");
 Statistic stats::queryCacheHits("QueryCacheHits", "QChits") ;
