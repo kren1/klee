@@ -213,6 +213,19 @@ DebugCrossCheckCoreSolverWith("debug-crosscheck-core-solver",
                                          KLEE_LLVM_CL_VAL_END),
                               cl::init(NO_SOLVER),
                               cl::cat(SolvingCat));
+
+cl::opt<CoreSolverType>
+DebugCrossCheckZ3IntSolverWith("debug-crosscheck-z3int-solver",
+                              cl::desc("Specifiy a solver to use for cross checking with z3 int solver"),
+                              cl::values(clEnumValN(STP_SOLVER, "stp", "stp"),
+                                         clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
+                                         clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
+                                         clEnumValN(Z3_SOLVER, "z3", "Z3"),
+                                         clEnumValN(NO_SOLVER, "none",
+                                                    "Do not cross check (default)")
+                                         KLEE_LLVM_CL_VAL_END),
+                              cl::init(NO_SOLVER),
+                              cl::cat(SolvingCat));
 }
 
 #undef STP_IS_DEFAULT_STR

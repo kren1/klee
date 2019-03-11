@@ -66,6 +66,8 @@ extern llvm::cl::opt<CoreSolverType> CoreSolverToUse;
 
 extern llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith;
 
+extern llvm::cl::opt<CoreSolverType> DebugCrossCheckZ3IntSolverWith;
+
 #ifdef ENABLE_METASMT
 
 enum MetaSMTBackendType {
