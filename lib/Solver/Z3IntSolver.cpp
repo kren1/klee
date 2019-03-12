@@ -412,16 +412,28 @@ SolverImpl::SolverRunStatus Z3IntSolverImpl::handleSolverResponse(
                    Z3_NUMERAL_AST &&
                "Evaluated expression has wrong sort");
 
-        uint64_t arrayElementValue = 0;
+        int64_t arrayElementValue = 0;
         __attribute__((unused))
-        bool successGet = Z3_get_numeral_uint64(builder->ctx, arrayElementExpr,
+        bool successGet = Z3_get_numeral_int64(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
         assert(successGet && "failed to get value back");
         switch(byteStride) {
-            case 1: assert(arrayElementValue <= std::numeric_limits<std::uint8_t>::max()); break;
-            case 2: assert(arrayElementValue <= std::numeric_limits<std::uint16_t>::max()); break;
-            case 4: assert(arrayElementValue <= std::numeric_limits<std::uint32_t>::max()); break;
-            case 8: assert(arrayElementValue <= std::numeric_limits<std::uint64_t>::max()); break;
+            case 1: 
+                  assert(arrayElementValue <= std::numeric_limits<std::int8_t>::max());
+                  assert(arrayElementValue >= std::numeric_limits<std::int8_t>::min());
+                  break;
+            case 2:
+                  assert(arrayElementValue <= std::numeric_limits<std::int16_t>::max()); 
+                  assert(arrayElementValue >= std::numeric_limits<std::int16_t>::min()); 
+                  break;
+            case 4: 
+                  assert(arrayElementValue <= std::numeric_limits<std::int32_t>::max());
+                  assert(arrayElementValue >= std::numeric_limits<std::int32_t>::min());
+                  break;
+            case 8:
+                  assert(arrayElementValue <= std::numeric_limits<std::int64_t>::max());
+                  assert(arrayElementValue >= std::numeric_limits<std::int64_t>::min());
+                  break;
             default: assert(0 && "Unknown byte stride");
         }
         uint8_t *p = (uint8_t*)&arrayElementValue;
