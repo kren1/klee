@@ -110,6 +110,7 @@ private:
   Z3ASTHandle sIntConst(int64_t value);
   Z3ASTHandle eqExpr(Z3ASTHandle a, Z3ASTHandle b);
   Z3ASTHandle ltExpr(Z3ASTHandle a, Z3ASTHandle b);
+  Z3ASTHandle leExpr(Z3ASTHandle a, Z3ASTHandle b);
   Z3ASTHandle geExpr(Z3ASTHandle a, Z3ASTHandle b);
 
   // logical left and right shift (not arithmetic)

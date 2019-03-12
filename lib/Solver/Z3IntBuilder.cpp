@@ -121,6 +121,9 @@ Z3ASTHandle Z3IntBuilder::ltExpr(Z3ASTHandle a, Z3ASTHandle b) {
   return Z3ASTHandle(Z3_mk_lt(ctx, a, b), ctx);
 }
 
+Z3ASTHandle Z3IntBuilder::leExpr(Z3ASTHandle a, Z3ASTHandle b) {
+  return Z3ASTHandle(Z3_mk_le(ctx, a, b), ctx);
+}
 Z3ASTHandle Z3IntBuilder::notExpr(Z3ASTHandle expr) {
   return Z3ASTHandle(Z3_mk_not(ctx, expr), ctx);
 }
@@ -209,10 +212,22 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
         auto rExpr = readExpr(array_expr, uIntConst(i)); 
         array_assertions.push_back(geExpr(rExpr, uIntConst(0)));
         switch(byteStride) {
-            case 1: array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << 8)));  break;
-            case 2: array_assertions.push_back(ltExpr(rExpr, uIntConst(1 << 16))); break;
-            case 4: array_assertions.push_back(ltExpr(rExpr, uIntConst(std::numeric_limits<uint32_t>::max()))); break;
-            case 8: array_assertions.push_back(ltExpr(rExpr, uIntConst(std::numeric_limits<std::uint64_t>::max()))); break;
+            case 1: 
+                  array_assertions.push_back(leExpr(rExpr,sIntConst(std::numeric_limits<std::int8_t>::max())));
+                  array_assertions.push_back(geExpr(rExpr,sIntConst(std::numeric_limits<std::int8_t>::min())));
+                  break;
+            case 2:
+                  array_assertions.push_back(leExpr(rExpr,sIntConst(std::numeric_limits<std::int16_t>::max())));
+                  array_assertions.push_back(geExpr(rExpr,sIntConst(std::numeric_limits<std::int16_t>::min())));
+                  break;
+            case 4: 
+                  array_assertions.push_back(leExpr(rExpr,sIntConst(std::numeric_limits<std::int32_t>::max())));
+                  array_assertions.push_back(geExpr(rExpr,sIntConst(std::numeric_limits<std::int32_t>::min())));
+                  break;
+            case 8:
+                  array_assertions.push_back(leExpr(rExpr,sIntConst(std::numeric_limits<std::int64_t>::max())));
+                  array_assertions.push_back(geExpr(rExpr,sIntConst(std::numeric_limits<std::int64_t>::min())));
+                  break;
             default: assert(0 && "Invalid byte stride");
         }
         
@@ -362,6 +377,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out <= 64 && "Unangled bigger than 64 bit wide constants");
     // Fast path.
     //Can't use the sign here, because the equality (and maybe other operations)will still be unsigned.
+    return sIntConst(CE->getAPValue().getSExtValue());
     if (false && SignHandler::isSign())
       return sIntConst(CE->getAPValue().getSExtValue());
     else
