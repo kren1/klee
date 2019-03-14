@@ -305,11 +305,11 @@ bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
   return SubExpr::create(re->index, base->index) == offset;
 }
  
-const ReadExpr* Z3IntBuilder::hasOrderedReads(ref<Expr> e, int stride) {
-    assert(e->getKind() == Expr::Concat);
+const ReadExpr* Z3IntBuilder::hasOrderedReads(const Expr *concatExpr, int stride, int& width) {
+    assert(concatExpr->getKind() == Expr::Concat);
     assert(stride == 1 || stride == -1);
     
-    const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
+    const ReadExpr *base = dyn_cast<ReadExpr>(concatExpr->getKid(0));
     
     // right now, all Reads are byte reads but some
     // transformations might change this
@@ -317,15 +317,18 @@ const ReadExpr* Z3IntBuilder::hasOrderedReads(ref<Expr> e, int stride) {
       return NULL;
     
     // Get stride expr in proper index width.
+    width = 8;
     Expr::Width idxWidth = base->index->getWidth();
     ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
     ref<Expr> offset = ConstantExpr::create(0, idxWidth);
     
-    e = e->getKid(1);
+    width += 8;
+    auto e = concatExpr->getKid(1);
     
     // concat chains are unbalanced to the right
     while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
+      width += 8;
       if (!isReadExprAtOffset(e->getKid(0), base, offset))
 	return NULL;
       
@@ -336,8 +339,10 @@ const ReadExpr* Z3IntBuilder::hasOrderedReads(ref<Expr> e, int stride) {
     if (!isReadExprAtOffset(e, base, offset))
       return NULL;
     
-    if (stride == -1)
-      return cast<ReadExpr>(e.get());
+    if (stride == -1) {
+      auto re = cast<ReadExpr>(e.get());
+      return re;
+    }
     else return base;
 }
 
@@ -395,6 +400,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
+    assert(re->getWidth() == re->updates.root->valueType && "Read of different width the the array type, meaning it is not an int read");
     return readExpr(getArrayForUpdate(re->updates.root, re->updates.head.get()),
                     construct(re->index, 0));
   }
@@ -408,10 +414,14 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
   }
 
   case Expr::Concat: {
-    auto re = hasOrderedReads(e, -1);
+    int readlsb_width;
+    auto re = hasOrderedReads(e.get(), -1, readlsb_width);
     assert(re && "Int Solver can't handle non ordered reads");
-    *width_out = 32;
+    *width_out = readlsb_width;
     auto stride = re->updates.root->valueType / 8;
+//    re->dump();
+//    llvm::errs() << "of width: " << *width_out << " array type: " << re->updates.root->valueType << "\n";
+    assert(readlsb_width == re->updates.root->valueType && "ReadLSB of different width the the array type, meaning it is not an int read");
     assert(stride > 0 && "can;t concatnact for unknwon array type");
     ref<Expr> index = UDivExpr::create(re->index, ConstantExpr::create(stride, re->index->getWidth()));
     return readExpr(getArrayForUpdate(re->updates.root, re->updates.head.get()),
@@ -431,6 +441,9 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
     int srcWidth;
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
+    if(ce->src->getWidth() == Expr::Bool)  {
+      return iteExpr(src, sIntConst(1), sIntConst(0));
+    }
     return src;
   }
 

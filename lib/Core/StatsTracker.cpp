@@ -435,6 +435,14 @@ void StatsTracker::writeStatsHeader() {
              << "'ResolveTime',"
              << "'QueryCexCacheMisses',"
              << "'QueryCexCacheHits',"
+             << "'IntQueries',"
+             << "'NonIntQueries',"
+             << "'ShiftFails',"
+             << "'ExtractFails',"
+             << "'XorFails',"
+             << "'BitWiseFails',"
+             << "'ReadLSBFails',"
+ 
 #ifdef KLEE_ARRAY_DEBUG
 	     << "'ArrayHashTime',"
 #endif
@@ -467,6 +475,14 @@ void StatsTracker::writeStatsLine() {
              << "," << time::microseconds(stats::resolveTime).toSeconds()
              << "," << stats::queryCexCacheMisses
              << "," << stats::queryCexCacheHits
+             << "," << stats::intQueries
+             << "," << stats::nonintQueries
+             << "," << stats::shiftFail
+             << "," << stats::extractFail
+             << "," << stats::xorFail
+             << "," << stats::bitwiseLogicFail
+             << "," << stats::readLSBMissMatchFail
+ 
 #ifdef KLEE_ARRAY_DEBUG
              << "," << time::microseconds(stats::arrayHashTime).toSeconds()
 #endif

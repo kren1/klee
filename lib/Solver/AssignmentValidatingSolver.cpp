@@ -103,6 +103,7 @@ bool AssignmentValidatingSolver::computeInitialValues(
   // This means for the assignment we get back query expression should evaluate
   // to false.
   if (CE->isTrue()) {
+    query.dump();
     llvm::errs()
         << "Query Expression evaluated to true when using assignment\n";
     llvm::errs() << "Expression:\n" << query.expr << "\n";

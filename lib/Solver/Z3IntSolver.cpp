@@ -51,12 +51,45 @@ class IsIntExpr : public ExprVisitor {
     }
   protected:
       
-    Action visitXor(const XorExpr&) override { return no(); }
-    Action visitShl(const ShlExpr&) override { return no(); }
-    Action visitLShr(const LShrExpr&) override { return no(); }
-    Action visitAShr(const AShrExpr&) override { return no(); }
-    Action visitExtract(const ExtractExpr&) override { return no(); }
-      
+    Action visitXor(const XorExpr&) override { ++stats::xorFail; return no(); }
+    Action visitShl(const ShlExpr&) override { ++stats::shiftFail; return no(); }
+    Action visitLShr(const LShrExpr&) override {++stats::shiftFail;  return no(); }
+    Action visitAShr(const AShrExpr&) override {++stats::shiftFail;  return no(); }
+    Action visitExtract(const ExtractExpr&) override {++stats::extractFail; return no(); }
+    Action visitConcat (const ConcatExpr& e) override {
+      int readLSB_width;
+      const ReadExpr* re = Z3IntBuilder::hasOrderedReads(&e, -1, readLSB_width);
+      if(re == nullptr ||
+        readLSB_width != re->updates.root->getRange()) {
+          ++stats::readLSBMissMatchFail;
+          return no();
+      }
+
+      return Action::skipChildren();
+    }
+ 
+    Action visitAnd(const AndExpr& e) override { 
+      if(e.right->getWidth() != Expr::Bool) {
+        ++stats::bitwiseLogicFail;
+        return no(); 
+      }
+      return Action::doChildren();
+    }
+    Action visitOr(const OrExpr& e) override { 
+      if(e.right->getWidth() != Expr::Bool) {
+        ++stats::bitwiseLogicFail;
+        return no(); 
+      }
+      return Action::doChildren();
+    }
+    Action visitNot(const NotExpr& e) override { 
+      if(e.expr->getWidth() != Expr::Bool) {
+        ++stats::bitwiseLogicFail;
+        return no(); 
+      }
+      return Action::doChildren();
+    }     
+
     explicit operator bool() const { return isIntExpr; }
     IsIntExpr() {}
     void reset() {isIntExpr = true;}
@@ -281,8 +314,12 @@ bool Z3IntSolverImpl::internalRunSolver(
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
 
   if(!IsIntExpr::isIntQuery(query)) {
-    llvm::errs() << "Int failed, falling back to coreSolver\n";
+//    llvm::errs() << "Int failed, falling back to coreSolver\n";
+    ++stats::nonintQueries;
     return coreSolver->impl->computeInitialValues(query, *objects, *values, hasSolution);
+  } else {
+    //llvm::errs() << "Using int solver! :)\n";
+    ++stats::intQueries;
   }
 
   TimerStatIncrementer t(stats::queryTime);

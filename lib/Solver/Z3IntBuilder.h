@@ -140,9 +140,9 @@ private:
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
   bool autoClearConstructCache;
   std::string z3LogInteractionFile;
-  const ReadExpr* hasOrderedReads(ref<Expr> e, int stride);
 
 public:
+  static const ReadExpr* hasOrderedReads(const Expr* e, int stride, int&);
   Z3_context ctx;
   std::unordered_map<const Array *, std::vector<Z3ASTHandle> >
       constant_array_assertions;
