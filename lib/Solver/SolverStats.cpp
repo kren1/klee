@@ -26,6 +26,15 @@ Statistic stats::queryConstructs("QueriesConstructs", "QB");
 Statistic stats::queryCounterexamples("QueriesCEX", "Qcex");
 Statistic stats::queryTime("QueryTime", "Qtime");
 
+Statistic stats::intQueries("IntQueries", "IQ");
+Statistic stats::nonintQueries("NonIntQueries", "nIQ");
+
+Statistic stats::shiftFail("ShiftIntFails", "ShiftF");
+Statistic stats::extractFail("ExtractIntFails", "ExtractF");
+Statistic stats::xorFail("XorFails", "XorF");
+Statistic stats::bitwiseLogicFail("BitwiseFails", "BwF");
+Statistic stats::readLSBMissMatchFail("ReadLSBFails", "LsbF");
+  
 #ifdef KLEE_ARRAY_DEBUG
 Statistic stats::arrayHashTime("ArrayHashTime", "AHtime");
 #endif

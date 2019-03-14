@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
 # ===-- klee-stats --------------------------------------------------------===##
@@ -162,6 +162,9 @@ def getLabels(pr):
     elif pr == 'more':
         labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
                   'TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
+    elif pr == 'int':
+        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
+                  'BCov(%)', 'TSolver(%)', 'IntQ', 'NonIntQ', "LSBFails", "BwF", "ShiftF", "XorF", "EtractF")
     else:
         labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
                   'BCov(%)', 'ICount', 'TSolver(%)')
@@ -171,9 +174,9 @@ def getLabels(pr):
 def getRow(record, stats, pr):
     """Compose data for the current run into a row."""
     I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
-        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr, QCexMiss, QCexHits = record
+        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr, QCexMiss, QCexHits, *rest = record
     maxMem, avgMem, maxStates, avgStates = stats
-
+    IntQueries,NonIntQueries,ShiftFails,ExtractFails,XorFails,BitWiseFails,ReadLSBFails = rest
     # special case for straight-line code: report 100% branch coverage
     if BTot == 0:
         BFull = BTot = 1
@@ -198,6 +201,11 @@ def getRow(record, stats, pr):
                100 * (2 * BFull + BPart) / (2 * BTot),
                SCov + SUnc, 100 * Ts / Treal,
                St, maxStates, Mem, maxMem)
+    elif pr == 'int':
+        row = (I, Treal,100 * SCov / (SCov + SUnc),
+               100 * (2 * BFull + BPart) / (2 * BTot),
+               SCov + SUnc, 100 * Ts / Treal,
+               IntQueries, NonIntQueries, ReadLSBFails, BitWiseFails, ShiftFails, XorFails, ExtractFails)
     else:
         row = (I, Treal, 100 * SCov / (SCov + SUnc),
                100 * (2 * BFull + BPart) / (2 * BTot),
@@ -302,6 +310,9 @@ def main():
     pControl.add_argument('--print-all',
                           action='store_true', dest='pAll',
                           help='Print all available information.')
+    pControl.add_argument('--print-int',
+                          action='store_true', dest='pInt',
+                          help='Print int information.')
     pControl.add_argument('--print-rel-times',
                           action='store_true', dest='pRelTimes',
                           help='Print only values of measured times. '
@@ -353,6 +364,8 @@ def main():
         pr = 'abstime'
     elif args.pMore:
         pr = 'more'
+    elif args.pInt:
+        pr = 'int'
 
     dirs = getKleeOutDirs(args.dir)
     if len(dirs) == 0:

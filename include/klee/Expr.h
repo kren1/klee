@@ -565,6 +565,7 @@ private:
 
 /// Class representing a one byte read from an array. 
 class ReadExpr : public NonConstantExpr {
+  unsigned width = 0;
 public:
   static const Kind kind = Read;
   static const unsigned numKids = 1;
@@ -582,7 +583,8 @@ public:
   
   static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
   
-  Width getWidth() const { assert(updates.root); return updates.root->getRange(); }
+  Width getWidth() const { assert(updates.root); return width == 0 ? updates.root->getRange() : width; }
+  void setWidth(unsigned w)  { width = w;}
   Kind getKind() const { return Read; }
   
   unsigned getNumKids() const { return numKids; }
