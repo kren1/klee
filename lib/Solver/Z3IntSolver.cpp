@@ -60,7 +60,7 @@ class IsIntExpr : public ExprVisitor {
       int readLSB_width;
       const ReadExpr* re = Z3IntBuilder::hasOrderedReads(&e, -1, readLSB_width);
       if(re == nullptr ||
-        readLSB_width != re->updates.root->getRange()) {
+        readLSB_width != re->updates.root->valueType) {
           ++stats::readLSBMissMatchFail;
           return no();
       }
