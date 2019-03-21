@@ -56,6 +56,19 @@ class IsIntExpr : public ExprVisitor {
     Action visitLShr(const LShrExpr&) override {++stats::shiftFail;  return no(); }
     Action visitAShr(const AShrExpr&) override {++stats::shiftFail;  return no(); }
     Action visitExtract(const ExtractExpr&) override {++stats::extractFail; return no(); }
+    Action visitRead(const ReadExpr& re) override {  
+        //ExprVisitor doesn't visit updatelists
+        const UpdateNode* un = re.updates.head;
+        while(un != nullptr) {
+            visit(un->index);
+            if(!isIntExpr) return no();
+            visit(un->value);
+            if(!isIntExpr) return no();
+            un = un->next;
+        }
+
+        return Action::doChildren();
+    }
     Action visitConcat (const ConcatExpr& e) override {
       int readLSB_width;
       const ReadExpr* re = Z3IntBuilder::hasOrderedReads(&e, -1, readLSB_width);
@@ -64,6 +77,7 @@ class IsIntExpr : public ExprVisitor {
           ++stats::readLSBMissMatchFail;
           return no();
       }
+      visitRead(*re);
 
       return Action::skipChildren();
     }
