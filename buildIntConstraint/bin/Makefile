@@ -18,7 +18,7 @@ CU_FLAGS:=--disable-inlining --libc=uclibc --posix-runtime --switch-type=interna
 $(PREFIX)klee-out-%: %.bc klee
 	rm -rf $@
 #	./klee $(COMMON_FLAGS) $(CU_FLAGS) -use-int-solver -output-dir=$@ $< -sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdin 8 --sym-stdout
-	./klee $(COMMON_FLAGS) $(CU_FLAGS) -use-int-solver -debug-crosscheck-z3int-solver=stp -output-dir=$@ $< -sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdin 8 --sym-stdout
+	./klee $(COMMON_FLAGS) $(CU_FLAGS) -use-query-log=all:kquery -use-int-solver -debug-crosscheck-z3int-solver=stp -output-dir=$@ $< -sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdin 8 --sym-stdout
 	#./klee $(COMMON_FLAGS) $(CU_FLAGS) -use-int-solver -debug-crosscheck-z3int-solver=stp -debug-assignment-validating-solver -output-dir=$@ $< -sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdin 8 --sym-stdout
 
 
