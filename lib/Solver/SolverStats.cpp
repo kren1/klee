@@ -34,6 +34,8 @@ Statistic stats::extractFail("ExtractIntFails", "ExtractF");
 Statistic stats::xorFail("XorFails", "XorF");
 Statistic stats::bitwiseLogicFail("BitwiseFails", "BwF");
 Statistic stats::readLSBMissMatchFail("ReadLSBFails", "LsbF");
+
+Statistic stats::crosscheckMissmatch("crosscheckMissmatch", "cMiss");
   
 #ifdef KLEE_ARRAY_DEBUG
 Statistic stats::arrayHashTime("ArrayHashTime", "AHtime");

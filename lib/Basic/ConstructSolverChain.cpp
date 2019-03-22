@@ -48,6 +48,7 @@ Solver *constructSolverChain(Solver *coreSolver,
   if(IsInt) {
     solver = new Z3IntSolver(solver);
     if (DebugCrossCheckZ3IntSolverWith != NO_SOLVER) {
+      
       Solver *oracleSolver = createCoreSolver(DebugCrossCheckZ3IntSolverWith);
       solver = createValidatingSolver(/*s=*/solver, /*oracle=*/oracleSolver);
     }

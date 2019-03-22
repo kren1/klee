@@ -424,6 +424,7 @@ void StatsTracker::writeStatsHeader() {
              << "'XorFails',"
              << "'BitWiseFails',"
              << "'ReadLSBFails',"
+             << "'CrosscheckMissmatch',"
  
 #ifdef KLEE_ARRAY_DEBUG
 	     << "'ArrayHashTime',"
@@ -464,6 +465,7 @@ void StatsTracker::writeStatsLine() {
              << "," << stats::xorFail
              << "," << stats::bitwiseLogicFail
              << "," << stats::readLSBMissMatchFail
+             << "," << stats::crosscheckMissmatch
  
 #ifdef KLEE_ARRAY_DEBUG
              << "," << time::microseconds(stats::arrayHashTime).toSeconds()

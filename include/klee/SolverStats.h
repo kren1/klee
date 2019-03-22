@@ -36,6 +36,7 @@ namespace stats {
   extern Statistic xorFail;
   extern Statistic bitwiseLogicFail;
   extern Statistic readLSBMissMatchFail;
+  extern Statistic crosscheckMissmatch;
   
 #ifdef KLEE_ARRAY_DEBUG
   extern Statistic arrayHashTime;

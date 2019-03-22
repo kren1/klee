@@ -57,6 +57,8 @@ class IsIntExpr : public ExprVisitor {
     Action visitAShr(const AShrExpr&) override {++stats::shiftFail;  return no(); }
     Action visitExtract(const ExtractExpr&) override {++stats::extractFail; return no(); }
     Action visitRead(const ReadExpr& re) override {  
+//        if( re.getWidth() != re.updates.root->valueType) return no();
+
         //ExprVisitor doesn't visit updatelists
         const UpdateNode* un = re.updates.head;
         while(un != nullptr) {
