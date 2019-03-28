@@ -127,7 +127,7 @@ private:
     if (!head) {
       // FIXME: We need to do something (assert, mangle, etc.) so that printing
       // distinct arrays with the same name doesn't fail.
-      PC << updates.root->name;
+      PC << updates.root->name << updates.root;
       return;
     }
 
@@ -177,7 +177,7 @@ private:
     if (openedList)
       PC << ']';
 
-    PC << " @ " << updates.root->name;
+    PC << " @ " << updates.root->name << updates.root;
   }
 
   void printWidth(PrintContext &PC, ref<Expr> e) {
@@ -497,7 +497,7 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
                                               ie = sortedArray.end();
          it != ie; ++it) {
       const Array *A = *it;
-      PC << "array " << A->name << "[" << A->size << "]"
+      PC << "array " << A->name << A << "[" << A->size << "]"
          << " : w" << A->domain << " -> w" << A->range << " = ";
       if (A->isSymbolicArray()) {
         PC << "symbolic";
@@ -550,7 +550,7 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
     PC.breakLine(indent - 1);
     PC << '[';
     for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it) {
-      PC << (*it)->name;
+      PC << (*it)->name << *it;
       if (it + 1 != evalArraysEnd)
         PC.breakLine(indent);
     }
