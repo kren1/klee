@@ -12,11 +12,17 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FileHandling.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/util/ExprUtil.h"
+#include "klee/Constraints.h"
 
 namespace {
 llvm::cl::opt<bool> DumpPartialQueryiesEarly(
     "log-partial-queries-early", llvm::cl::init(false),
     llvm::cl::desc("Log queries before calling the solver (default=off)"));
+
+llvm::cl::opt<bool> countQueryConstructs(
+    "count-constructs", llvm::cl::init(false),
+    llvm::cl::desc("Count the constructs in queries"));
 
 #ifdef HAVE_ZLIB_H
 llvm::cl::opt<bool> CreateCompressedQueryLog(
@@ -24,6 +30,50 @@ llvm::cl::opt<bool> CreateCompressedQueryLog(
     llvm::cl::desc("Compress query log files (default=off)"));
 #endif
 }
+
+#define visitX(X, var) Action visit##X (const X ## Expr& e) override { \
+  var++; \
+  return Action::doChildren(); \
+}
+
+class CountConstructs : public ExprVisitor {
+  int andExpr=0, orExpr=0, notExpr=0, addExpr=0, subExpr=0, divExpr=0, remExpr=0, eqExpr=0, ltExpr=0, leExpr=0;
+  protected:
+    Action visitRead(const ReadExpr& re) override {  
+        return Action::skipChildren();
+    }
+    Action visitConcat (const ConcatExpr& e) override {
+       return Action::skipChildren();
+    }
+
+    visitX(And, andExpr)
+    visitX(Or, orExpr)
+    visitX(Not, notExpr)
+    visitX(Add, addExpr)
+    visitX(Sub, subExpr)
+    visitX(UDiv, divExpr)
+    visitX(SDiv, divExpr)
+    visitX(SRem, remExpr)
+    visitX(URem, remExpr)
+    visitX(Eq, eqExpr)
+    visitX(Ult, ltExpr)
+    visitX(Slt, ltExpr)
+    visitX(Ule, leExpr)
+    visitX(Sle, leExpr)
+ 
+    CountConstructs() {}
+  public:
+    static bool countConstructs(const Query& q, llvm::raw_string_ostream& logB) {
+  
+        CountConstructs cc;
+        cc.visit(q.expr);
+        for(auto &e : q.constraints) {
+            cc.visit(e);
+        }
+        logB << cc.andExpr << " " << cc.orExpr << " " << cc.notExpr << " " << cc.addExpr << " " << cc.subExpr << " " << cc.divExpr << " " << cc.remExpr << " " << cc.eqExpr << " " << cc.ltExpr << " " << cc.leExpr;
+        return true;
+    }
+};
 
 QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
                                        const std::string &commentSign,
@@ -111,7 +161,7 @@ bool QueryLoggingSolver::computeTruth(const Query &query, bool &isValid) {
   bool success = solver->impl->computeTruth(query, isValid);
 
   finishQuery(success);
-
+  
   if (success) {
     logBuffer << queryCommentSign
               << "   Is Valid: " << (isValid ? "true" : "false") << "\n";
@@ -159,6 +209,8 @@ bool QueryLoggingSolver::computeValue(const Query &query, ref<Expr> &result) {
   return success;
 }
 
+extern bool wasIntQuery;
+
 bool QueryLoggingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
@@ -168,6 +220,14 @@ bool QueryLoggingSolver::computeInitialValues(
       solver->impl->computeInitialValues(query, objects, values, hasSolution);
 
   finishQuery(success);
+
+  if(countQueryConstructs) {
+      logBuffer << "#\t";
+      logBuffer << (wasIntQuery ? "int " : "noint ");
+      CountConstructs::countConstructs(query,logBuffer);
+      logBuffer << " " << lastQueryDuration << "\n";
+  }
+
 
   if (success) {
     logBuffer << queryCommentSign
