@@ -7,6 +7,11 @@ $(PREFIX)klee-out-int: srt.bc klee
 	rm -rf $@
 	./klee $(COMMON_FLAGS) -use-int-solver -output-dir=$@ srt.bc
 
+$(PREFIX)klee-out-count: srt.bc klee
+	rm -rf $@
+	./klee $(COMMON_FLAGS) -count-constructs -use-int-solver -output-dir=$@ srt.bc
+
+
 $(PREFIX)klee-out-noint: srt.bc klee
 	rm -rf $@
 	./klee $(COMMON_FLAGS) -output-dir=$@ srt.bc

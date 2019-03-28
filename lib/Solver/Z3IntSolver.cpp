@@ -35,6 +35,11 @@ llvm::cl::opt<bool> Z3ValidateModels(
     "debug-z3int-validate-models", llvm::cl::init(false),
     llvm::cl::desc("When generating Z3 models validate these against the query"));
 
+llvm::cl::opt<bool> countQueryConstructs(
+    "count-constructs", llvm::cl::init(false),
+    llvm::cl::desc("Count the constructs in queries"));
+
+
 llvm::cl::opt<unsigned>
     Z3VerbosityLevel("debug-z3int-verbosity", llvm::cl::init(0),
                      llvm::cl::desc("Z3 verbosity level (default=0)"));
@@ -125,7 +130,48 @@ class IsIntExpr : public ExprVisitor {
     }
 };
 
+#define visitX(X, var) Action visit##X (const X ## Expr& e) override { \
+  var++; \
+  return Action::doChildren(); \
+}
+
+class CountConstructs : public ExprVisitor {
+  int andExpr=0, orExpr=0, notExpr=0, addExpr=0, subExpr=0, divExpr=0, remExpr=0, eqExpr=0, ltExpr=0, leExpr=0;
+  protected:
+    Action visitRead(const ReadExpr& re) override {  
+        return Action::skipChildren();
+    }
+    Action visitConcat (const ConcatExpr& e) override {
+       return Action::skipChildren();
+    }
+
+    visitX(And, andExpr)
+    visitX(Or, orExpr)
+    visitX(Not, notExpr)
+    visitX(Add, addExpr)
+    visitX(Sub, subExpr)
+    visitX(UDiv, divExpr)
+    visitX(SDiv, divExpr)
+    visitX(SRem, remExpr)
+    visitX(URem, remExpr)
+    visitX(Eq, eqExpr)
+    visitX(Ult, ltExpr)
+    visitX(Slt, ltExpr)
+    visitX(Ule, leExpr)
+    visitX(Sle, leExpr)
  
+    CountConstructs() {}
+  public:
+    static bool countConstructs(const Query& q) {
+        CountConstructs cc;
+        cc.visit(q.expr);
+        for(auto &e : q.constraints) {
+            cc.visit(e);
+        }
+        llvm::errs() << cc.andExpr << " " << cc.orExpr << " " << cc.notExpr << " " << cc.addExpr << " " << cc.subExpr << " " << cc.divExpr << " " << cc.remExpr << " " << cc.eqExpr << " " << cc.ltExpr << " " << cc.leExpr << "\n";
+        return true;
+    }
+};
 class Z3IntSolverImpl : public SolverImpl {
 private:
   Z3IntBuilder *builder;
@@ -331,9 +377,17 @@ bool Z3IntSolverImpl::internalRunSolver(
 
   if(!IsIntExpr::isIntQuery(query)) {
 //    llvm::errs() << "Int failed, falling back to coreSolver\n";
+    if(countQueryConstructs) {
+      llvm::errs() << "noint ";
+      CountConstructs::countConstructs(query);
+    }
     ++stats::nonintQueries;
     return coreSolver->impl->computeInitialValues(query, *objects, *values, hasSolution);
   } else {
+    if(countQueryConstructs) {
+      llvm::errs() << "int ";
+      CountConstructs::countConstructs(query);
+    }
     //llvm::errs() << "Using int solver! :)\n";
     ++stats::intQueries;
   }
