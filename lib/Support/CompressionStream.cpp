@@ -53,7 +53,7 @@ compressed_fd_ostream::compressed_fd_ostream(const std::string &Filename,
   strm.avail_out = BUFSIZE;
 
   const auto ret = deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, 31,
-                                8 /* memory usage default, 0 smallest, 9 highest*/,
+                                1 /* memory usage default, 0 smallest, 9 highest*/,
                                 Z_DEFAULT_STRATEGY);
   if (ret != Z_OK)
     ErrorInfo = "Deflate initialisation returned with error: " + std::to_string(ret);
