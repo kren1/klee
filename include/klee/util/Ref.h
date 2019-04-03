@@ -123,6 +123,14 @@ public:
     inc();
   }
 
+  // normal move constructor
+  ref(ref<T> &&r) noexcept : ptr(std::move(r.ptr)) { r.ptr = nullptr; }
+
+  // conversion move constructor
+  template <class U> ref(ref<U> &&r) noexcept : ptr(std::move(r.ptr)) {
+    r.ptr = nullptr;
+  }
+
   // pointer operations
   T *get () const {
     return ptr;
@@ -168,6 +176,22 @@ public:
     dec();
     ptr = saved_ptr;
 
+    return *this;
+  }
+
+  // Move assignment operator
+  ref<T> &operator=(ref<T> &&r) noexcept {
+    using std::swap;
+    swap(ptr, r.ptr);
+    return *this;
+  }
+
+  // Move assignment operator
+  template <class U> ref<T> &operator=(ref<U> &&r) {
+    // swap
+    auto *tmp = cast_or_null<T>(r.ptr);
+    r.ptr = cast_or_null<U>(ptr);
+    ptr = tmp;
     return *this;
   }
 

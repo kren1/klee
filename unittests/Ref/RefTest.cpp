@@ -61,6 +61,55 @@ TEST(RefTest, SelfAssign) {
   EXPECT_EQ(1, finished_counter);
 }
 
+TEST(RefTest, SelfMove) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    // Check self move
+    r = std::move(r);
+    finished = 1;
+  }
+  EXPECT_EQ(1, finished_counter);
+}
+
+TEST(RefTest, MoveAssignment) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    struct Expr *q_e = new Expr();
+    ref<Expr> q(q_e);
+
+    // Move the object
+    q = std::move(r);
+
+    finished = 1;
+
+    // Re-assign new object
+    r = new Expr();
+  }
+  EXPECT_EQ(3, finished_counter);
+}
+
+TEST(RefTest, MoveConstructor) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    ref<Expr> q(std::move(r_e));
+
+    finished = 1;
+  }
+  EXPECT_EQ(1, finished_counter);
+}
+
 TEST(RefTest, SelfRef) {
   struct SelfRefExpr *e_1 = new SelfRefExpr(nullptr);
   ref<SelfRefExpr> r_e_1(e_1);
