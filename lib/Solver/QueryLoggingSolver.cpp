@@ -210,6 +210,32 @@ bool QueryLoggingSolver::computeValue(const Query &query, ref<Expr> &result) {
 }
 
 extern bool wasIntQuery;
+bool isEqQuery(ref<Expr> e) {
+    EqExpr* eq = dyn_cast<EqExpr>(e);
+    if(eq == nullptr) return false;
+    ConstantExpr* ce = dyn_cast<ConstantExpr>(eq->left);
+    if(ce == nullptr) return true; //Top level eq
+
+    if(ce->getWidth() == Expr::Bool && ce->getZExtValue() == 0) return isEqQuery(eq->right);
+    else return true;
+
+
+}
+
+bool isIeqQuery(ref<Expr> e) {
+    EqExpr* eq = dyn_cast<EqExpr>(e);
+    if(eq == nullptr) {
+        auto k = e->getKind();
+        return k == Expr::Ult || k == Expr::Ule || k == Expr::Slt || k == Expr::Sle;
+    }
+    ConstantExpr* ce = dyn_cast<ConstantExpr>(eq->left);
+    if(ce == nullptr) return false; //Top level eq
+
+    if(ce->getWidth() == Expr::Bool && ce->getZExtValue() == 0) return isIeqQuery(eq->right);
+    else return false;
+
+
+}
 
 bool QueryLoggingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
@@ -226,6 +252,19 @@ bool QueryLoggingSolver::computeInitialValues(
       logBuffer << (wasIntQuery ? "int " : "noint ");
       CountConstructs::countConstructs(query,logBuffer);
       logBuffer << " " << lastQueryDuration << "\n";
+
+      int eqExpr=0, inEqExpr=0;
+      eqExpr += isEqQuery(query.expr) ? 1 : 0;
+      inEqExpr += isIeqQuery(query.expr) ? 1 : 0;
+      for(auto &e : query.constraints) {
+        eqExpr += isEqQuery(e) ? 1 : 0;
+        inEqExpr += isIeqQuery(e) ? 1 : 0;
+      }
+
+      logBuffer << "#\ttoplevel:";
+      logBuffer << (wasIntQuery ? "i " : "ni ");
+      logBuffer << eqExpr << " " << inEqExpr << " " << lastQueryDuration << "\n";
+
   }
 
 
