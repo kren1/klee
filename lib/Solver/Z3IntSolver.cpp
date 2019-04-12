@@ -53,7 +53,13 @@ class IsIntExpr : public ExprVisitor {
     }
   protected:
       
-    Action visitXor(const XorExpr&) override { ++stats::xorFail; return no(); }
+    Action visitXor(const XorExpr& e) override { 
+       if(e.right->getWidth() != Expr::Bool) {
+        ++stats::xorFail; 
+        return no(); 
+      }
+      return Action::doChildren();
+    }
     Action visitShl(const ShlExpr&) override { ++stats::shiftFail; return no(); }
     Action visitLShr(const LShrExpr&) override {++stats::shiftFail;  return no(); }
     Action visitAShr(const AShrExpr&) override {++stats::shiftFail;  return no(); }
