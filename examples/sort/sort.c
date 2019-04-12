@@ -5,7 +5,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define N 7
+//#define N 7
 
 static void insert_ordered(int *array, unsigned nelem, int item) {
   unsigned i = 0;
@@ -51,8 +51,8 @@ void test(int *array, unsigned nelem) {
   int *temp1 = malloc(sizeof(*array) * nelem);
   int *temp2 = malloc(sizeof(*array) * nelem);
 
-  printf("input: [%d, %d, %d, %d]\n",
-         array[0], array[1], array[2], array[3]);
+//  printf("input: [%d, %d, %d, %d]\n",
+//         array[0], array[1], array[2], array[3]);
 
   memcpy(temp1, array, sizeof(*array) * nelem);
   memcpy(temp2, array, sizeof(*array) * nelem);
@@ -60,11 +60,11 @@ void test(int *array, unsigned nelem) {
   insertion_sort(temp1, nelem);
   bubble_sort(temp2, nelem);
 
-  printf("insertion_sort: [%d, %d, %d, %d]\n",
-         temp1[0], temp1[1], temp1[2], temp1[3]);
+//  printf("insertion_sort: [%d, %d, %d, %d]\n",
+//         temp1[0], temp1[1], temp1[2], temp1[3]);
 
-  printf("bubble_sort   : [%d, %d, %d, %d]\n",
-         temp2[0], temp2[1], temp2[2], temp2[3]);
+//  printf("bubble_sort   : [%d, %d, %d, %d]\n",
+//         temp2[0], temp2[1], temp2[2], temp2[3]);
 
   for (unsigned i = 0; i != nelem; ++i)
     assert(temp1[i] == temp2[i]);
