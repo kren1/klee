@@ -210,7 +210,6 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
 //      llvm::errs() << root->name << ":" << root->valueType << "\n";
       for (unsigned i = 0, e = (root->size / byteStride); i != e; ++i) {
         auto rExpr = readExpr(array_expr, uIntConst(i)); 
-        array_assertions.push_back(geExpr(rExpr, uIntConst(0)));
         switch(byteStride) {
             case 1: 
                   array_assertions.push_back(leExpr(rExpr,sIntConst(std::numeric_limits<std::int8_t>::max())));
