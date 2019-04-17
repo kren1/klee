@@ -189,11 +189,15 @@ Z3ASTHandle Z3IntBuilder::getInitialArray(const Array *root) {
         // construct(= (select i root) root->value[i]) to be asserted in
         // Z3Solver.cpp
         int width_out;
+	      
+	// start with the MSB of the the stride
+    ref<ConstantExpr> init = root->constantValues[((i + 1) * byteStride) - 1];
+    for (size_t j = 1; j < byteStride; j++){
+      // Concat does essentially a  lhs <<=| rhs operation
+      ref<ConstantExpr> rhs = root->constantValues[((i + 1) * byteStride) - j - 1];
+      init = init->Concat(rhs);
+    }
 
-        auto init = root->constantValues[i];
-        for(int j = 1; j < byteStride; j++) {
-            init->Concat(root->constantValues[i + j]);
-        }
 
         Z3ASTHandle array_value = construct(init, &width_out);
         auto rExpr = readExpr(array_expr, uIntConst(i)); 
