@@ -22,13 +22,8 @@ int klee_range(int start, int end, const char* name) {
     klee_make_symbolic(&x, sizeof x, name); 
 
     /* Make nicer constraint when simple... */
-    if (start==0) {
-      klee_assume((unsigned) x < (unsigned) end);
-    } else {
       klee_assume(start <= x);
       klee_assume(x < end);
-    }
-
     return x;
   }
 }
