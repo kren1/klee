@@ -596,6 +596,7 @@ Z3ASTHandle Z3IntBuilder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(se->left, width_out);
     Z3ASTHandle right = construct(se->right, width_out);
     assert(*width_out != 1 && "uncanonicalized sle");
+    *width_out = 1;
     return Z3ASTHandle(Z3_mk_le(ctx, left, right), ctx);
   }
 
