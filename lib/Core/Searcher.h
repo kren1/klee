@@ -208,7 +208,6 @@ namespace klee {
       os << "MergingSearcher\n";
     }
   };
-
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
     time::Span timeBudget;
@@ -235,6 +234,27 @@ namespace klee {
          << ", baseSearcher:\n";
       baseSearcher->printName(os);
       os << "</BatchingSearcher>\n";
+    }
+  };
+
+  class PendingSearcher : public Searcher {
+    Searcher *baseSearcher;
+    std::vector<ExecutionState*> pendingStates;
+    Executor* exec;
+
+  public:
+    PendingSearcher(Searcher *baseSearcher, Executor* exec);
+    ~PendingSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty() { return baseSearcher->empty(); }
+    void printName(llvm::raw_ostream &os) {
+      os << "<PendingSearcher> ";
+      baseSearcher->printName(os);
+      os << "</PendingSearcher>\n";
     }
   };
 

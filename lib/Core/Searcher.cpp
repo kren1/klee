@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Searcher.h"
+#include "TimingSolver.h"
 
 #include "CoreStats.h"
 #include "Executor.h"
@@ -330,6 +331,58 @@ ExecutionState& MergingSearcher::selectState() {
 }
 
 ///
+PendingSearcher::PendingSearcher(Searcher *_baseSearcher,
+                                   Executor* _exec) 
+  : baseSearcher(_baseSearcher), exec(_exec) {
+  
+}
+
+PendingSearcher::~PendingSearcher() {
+  delete baseSearcher;
+}
+
+ExecutionState &PendingSearcher::selectState() {
+  return baseSearcher->selectState();
+}
+
+void
+PendingSearcher::update(ExecutionState *current,
+                         const std::vector<ExecutionState *> &addedStates,
+                         const std::vector<ExecutionState *> &removedStates) {
+  std::vector<ExecutionState *> filteredAddedStates(addedStates.begin(), addedStates.end());
+  auto firstPending = std::partition(filteredAddedStates.begin(),filteredAddedStates.end(),
+            [](const auto& es) {return !es->hasPending; });
+
+  std::vector<ExecutionState *> removedStatesLocal(removedStates.begin(), removedStates.end());
+  if(current && current->hasPending) {
+      pendingStates.push_back(current);
+      removedStatesLocal.push_back(current);
+      current = nullptr;
+  }
+  pendingStates.insert(pendingStates.end(), firstPending, filteredAddedStates.end());
+  filteredAddedStates.erase(firstPending, filteredAddedStates.end());
+
+  baseSearcher->update(current, filteredAddedStates, removedStatesLocal);
+  while(baseSearcher->empty() && !pendingStates.empty()) {
+      llvm::errs() << "Reviving pending state: ";
+      bool solverResult;
+      auto es = pendingStates[0];
+      pendingStates.erase(pendingStates.begin());
+      exec->solver->mayBeTrue(*es, es->pendingConstraint, solverResult);
+      if(solverResult) {
+          exec->addConstraint(*es, es->pendingConstraint);
+          es->hasPending = false;
+          baseSearcher->update(current, {es}, {});
+          llvm::errs() << "success\n";
+      } else {
+          llvm::errs() << "killing it\n";
+          exec->terminateState(*es);
+      }
+ 
+  }
+}
+
+
 
 BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
                                    time::Span _timeBudget,

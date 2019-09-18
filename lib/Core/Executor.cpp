@@ -2734,41 +2734,49 @@ void Executor::updateStates(ExecutionState *current) {
   if(current->hasPending) {
       Query qr(current->constraints, current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
-      if(status ) errs() << ("current CEX cache HIT!\n");
-//          else terminateState(*current);
+      if(status ) {  
+          errs() << ("current CEX cache HIT!\n") ;
+          addConstraint(*current,current->pendingConstraint);
+          current->hasPending = false;
+      }
+//         else terminateState(*current);
 //      else errs() << ("current CEX cache MISS!\n");
 
-      solver->solver->mayBeTrue(qr, solverResult);
-      if(solverResult) {
-         llvm::errs() << "current is feasible \n";
-         addConstraint(*current,current->pendingConstraint);
-          
-      }
-      else {
-          llvm::errs() << "current state is NOT feasible \n";
-          terminateState(*current);
-      }
-      current->hasPending = false;
+//      solver->solver->mayBeTrue(qr, solverResult);
+//      if(solverResult) {
+//         llvm::errs() << "current is feasible \n";
+//         addConstraint(*current,current->pendingConstraint);
+//          
+//      }
+//      else {
+//          llvm::errs() << "current state is NOT feasible \n";
+//          terminateState(*current);
+//      }
+//      current->hasPending = false;
   }
 
   for(ExecutionState* current : addedStates) {
       if(current->hasPending) {
           Query qr(current->constraints, current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
-          if(status) errs() << ("added CEX cache HIT!\n");
+          if(status) {
+              errs() << ("added CEX cache HIT!\n");
+              addConstraint(*current,current->pendingConstraint);
+              current->hasPending = false;
+          }
 //          else terminateState(*current);
 //          else errs() << ("added CEX cache MISS!\n");
 
-          solver->solver->mayBeTrue(qr, solverResult);
-          if(solverResult) {
-              llvm::errs() << "addedState  is feasible \n";
-              addConstraint(*current,current->pendingConstraint);
-          }
-          else {
-              llvm::errs() << "added state is NOT feasible \n";
-              terminateState(*current);
-          }
-          current->hasPending = false;
+//          solver->solver->mayBeTrue(qr, solverResult);
+//          if(solverResult) {
+//              llvm::errs() << "addedState  is feasible \n";
+//              addConstraint(*current,current->pendingConstraint);
+//          }
+//          else {
+//              llvm::errs() << "added state is NOT feasible \n";
+//              terminateState(*current);
+//          }
+//          current->hasPending = false;
       }
   }
 
@@ -3006,6 +3014,7 @@ void Executor::run(ExecutionState &initialState) {
   }
 
   searcher = constructUserSearcher(*this);
+  searcher = new PendingSearcher(searcher, this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());

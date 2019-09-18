@@ -120,6 +120,7 @@ public:
     Unhandled
   };
 
+  TimingSolver *solver;
 private:
   static const char *TerminateReasonNames[];
 
@@ -130,7 +131,6 @@ private:
   Searcher *searcher;
 
   ExternalDispatcher *externalDispatcher;
-  TimingSolver *solver;
   Solver *fastSolver;
   MemoryManager *memory;
   std::set<ExecutionState*> states;
@@ -354,12 +354,6 @@ private:
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
 
-  /// Add the given (boolean) condition as a constraint on state. This
-  /// function is a wrapper around the state's addConstraint function
-  /// which also manages propagation of implied values,
-  /// validity checks, and seed patching.
-  void addConstraint(ExecutionState &state, ref<Expr> condition);
-
   // Called on [for now] concrete reads, replaces constant with a symbolic
   // Used for testing.
   ref<Expr> replaceReadWithSymbolic(ExecutionState &state, ref<Expr> e);
@@ -430,8 +424,6 @@ private:
   void pauseState(ExecutionState& state);
   // add state to searcher only
   void continueState(ExecutionState& state);
-  // remove state from queue and delete
-  void terminateState(ExecutionState &state);
   // call exit handler and terminate state
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
   // call exit handler and terminate state
@@ -494,6 +486,14 @@ public:
     return *interpreterHandler;
   }
 
+  /// Add the given (boolean) condition as a constraint on state. This
+  /// function is a wrapper around the state's addConstraint function
+  /// which also manages propagation of implied values,
+  /// validity checks, and seed patching.
+  void addConstraint(ExecutionState &state, ref<Expr> condition);
+
+  // remove state from queue and delete
+  void terminateState(ExecutionState &state);
   void setPathWriter(TreeStreamWriter *tsw) override { pathWriter = tsw; }
 
   void setSymbolicPathWriter(TreeStreamWriter *tsw) override {
