@@ -71,7 +71,7 @@ class CexCachingSolver : public SolverImpl {
   
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
-  assignmentsTable_ty assignmentsTable;
+  static assignmentsTable_ty assignmentsTable;
 
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
@@ -88,13 +88,13 @@ class CexCachingSolver : public SolverImpl {
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
-   const Array* arr = cache->CreateArray("str", 8);
+   const Array* arr = cache->CreateArray("msg", 8);
    std::vector<const Array*> objects = {arr};
    std::vector< std::vector<unsigned char> > values = {{'g', 'o', 't','c','h','a','\0','b'}};
    Assignment* binding = new Assignment (objects, values);
    assignmentsTable.insert(binding);
 
-   std::vector< std::vector<unsigned char> > values1 = {{'g', 'o', 't','h','c','a','\0','b'}};
+   std::vector< std::vector<unsigned char> > values1 = {{'h', 'e', 'l','l','o','j','j','j'}};
    binding = new Assignment (objects, values1);
    assignmentsTable.insert(binding);
   }
@@ -281,12 +281,13 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 
 ///
 
+CexCachingSolver::assignmentsTable_ty CexCachingSolver::assignmentsTable;
 CexCachingSolver::~CexCachingSolver() {
   cache.clear();
   delete solver;
-  for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
-         ie = assignmentsTable.end(); it != ie; ++it)
-    delete *it;
+//  for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
+//         ie = assignmentsTable.end(); it != ie; ++it)
+//    delete *it;
 }
 
 bool CexCachingSolver::computeValidity(const Query& query,
