@@ -349,6 +349,7 @@ void
 PendingSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+//  llvm::errs() << "Adding " << addedStates.size() << " removing: " << removedStates.size() << "\n";
 
   std::vector<ExecutionState *> filteredAddedStates(addedStates.begin(), addedStates.end());
   auto firstPending = std::partition(filteredAddedStates.begin(),filteredAddedStates.end(),
@@ -358,7 +359,6 @@ PendingSearcher::update(ExecutionState *current,
   if(current && current->pendingConstraint) {
       pendingStates.push_back(current);
       removedStatesLocal.push_back(current);
-      current = nullptr;
   }
   pendingStates.insert(pendingStates.end(), firstPending, filteredAddedStates.end());
   filteredAddedStates.erase(firstPending, filteredAddedStates.end());
@@ -375,7 +375,7 @@ PendingSearcher::update(ExecutionState *current,
       if(solverResult) {
           exec->addConstraint(*es, *es->pendingConstraint);
           es->pendingConstraint = nullptr;
-          baseSearcher->update(current, {es}, {});
+          baseSearcher->update(nullptr, {es}, {});
           llvm::errs() << "success\n";
       } else {
           llvm::errs() << "killing it\n";
