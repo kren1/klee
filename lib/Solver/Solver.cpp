@@ -41,6 +41,9 @@ bool Solver::evaluate(const Query& query, Validity &result) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
     result = CE->isTrue() ? True : False;
     return true;
+  } else {
+    result = Unknown;
+    return true;
   }
 
   return impl->computeValidity(query, result);

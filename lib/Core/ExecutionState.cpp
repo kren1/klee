@@ -76,6 +76,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     coveredNew(false),
     forkDisabled(false),
     ptreeNode(0),
+    pendingConstraint(ConstantExpr::create(0, Expr::Bool)),
     steppedInstructions(0){
   pushFrame(0, kf);
 }
@@ -125,6 +126,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),
+    pendingConstraint(ConstantExpr::create(0, Expr::Bool)),
     steppedInstructions(state.steppedInstructions)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)

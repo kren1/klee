@@ -73,6 +73,9 @@ private:
   ExecutionState &operator=(const ExecutionState &);
 
 public:
+
+  ref<Expr> pendingConstraint;
+  bool hasPending = false;
   // Execution - Control Flow specific
 
   /// @brief Pointer to instruction to be executed after the current

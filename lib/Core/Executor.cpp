@@ -1100,8 +1100,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
+    errs() << "Adding true and falste constraints \n";
+    trueState->pendingConstraint = condition;
+    falseState->pendingConstraint = Expr::createIsZero(condition);
+    trueState->hasPending = true;
+    falseState->hasPending = true;
+//    addConstraint(*trueState, condition);
+//    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2720,9 +2725,42 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 }
 
 void Executor::updateStates(ExecutionState *current) {
+  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
+  
+  bool solverResult;
+  if(current->hasPending) {
+      solver->solver->mayBeTrue(Query(current->constraints, current->pendingConstraint), solverResult);
+      if(solverResult) {
+         llvm::errs() << "current is feasible \n";
+         addConstraint(*current,current->pendingConstraint);
+          
+      }
+      else {
+          llvm::errs() << "current state is NOT feasible \n";
+          terminateState(*current);
+      }
+      current->hasPending = false;
+  }
+
+  for(ExecutionState* current : addedStates) {
+      if(current->hasPending) {
+          solver->solver->mayBeTrue(Query(current->constraints, current->pendingConstraint), solverResult);
+          if(solverResult) {
+              llvm::errs() << "addedState  is feasible \n";
+              addConstraint(*current,current->pendingConstraint);
+          }
+          else {
+              llvm::errs() << "added state is NOT feasible \n";
+              terminateState(*current);
+          }
+          current->hasPending = false;
+      }
+  }
+
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
+//if(addedStates.size() >0)  llvm::errs() << "Added states " << addedStates.size() << "\n";
   
   states.insert(addedStates.begin(), addedStates.end());
   addedStates.clear();

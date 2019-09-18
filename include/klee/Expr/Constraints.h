@@ -58,8 +58,8 @@ public:
     return constraints != other.constraints;
   }
 
-private:
   std::vector<ref<Expr>> constraints;
+private:
 
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);
