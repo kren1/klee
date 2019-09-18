@@ -454,6 +454,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
+  this->fastSolver = klee::createCexCachingSolver(createDummySolver(), &arrayCache);
+
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
@@ -2728,8 +2730,15 @@ void Executor::updateStates(ExecutionState *current) {
   assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
   
   bool solverResult;
+  bool status;
   if(current->hasPending) {
-      solver->solver->mayBeTrue(Query(current->constraints, current->pendingConstraint), solverResult);
+      Query qr(current->constraints, current->pendingConstraint);
+      status = fastSolver->mayBeTrue(qr, solverResult);
+      if(status ) errs() << ("current CEX cache HIT!\n");
+//          else terminateState(*current);
+//      else errs() << ("current CEX cache MISS!\n");
+
+      solver->solver->mayBeTrue(qr, solverResult);
       if(solverResult) {
          llvm::errs() << "current is feasible \n";
          addConstraint(*current,current->pendingConstraint);
@@ -2744,7 +2753,13 @@ void Executor::updateStates(ExecutionState *current) {
 
   for(ExecutionState* current : addedStates) {
       if(current->hasPending) {
-          solver->solver->mayBeTrue(Query(current->constraints, current->pendingConstraint), solverResult);
+          Query qr(current->constraints, current->pendingConstraint);
+          status = fastSolver->mayBeTrue(qr, solverResult);
+          if(status) errs() << ("added CEX cache HIT!\n");
+//          else terminateState(*current);
+//          else errs() << ("added CEX cache MISS!\n");
+
+          solver->solver->mayBeTrue(qr, solverResult);
           if(solverResult) {
               llvm::errs() << "addedState  is feasible \n";
               addConstraint(*current,current->pendingConstraint);

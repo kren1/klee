@@ -17,6 +17,7 @@
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr/ArrayCache.h"
+#include "klee/Solver/Solver.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
@@ -130,6 +131,7 @@ private:
 
   ExternalDispatcher *externalDispatcher;
   TimingSolver *solver;
+  Solver *fastSolver;
   MemoryManager *memory;
   std::set<ExecutionState*> states;
   StatsTracker *statsTracker;

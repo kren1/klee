@@ -11,6 +11,7 @@
 #define KLEE_SOLVER_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ArrayCache.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Solver/SolverCmdLine.h"
 
@@ -234,6 +235,7 @@ namespace klee {
   ///
   /// \param s - The underlying solver to use.
   Solver *createCexCachingSolver(Solver *s);
+  Solver *createCexCachingSolver(Solver *s, ArrayCache*);
 
   /// createFastCexSolver - Create a "fast counterexample solver", which tries
   /// to quickly compute a satisfying assignment for a constraint set using

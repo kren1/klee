@@ -10,6 +10,7 @@
 #include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Assignment.h"
+#include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
@@ -34,7 +35,7 @@ cl::opt<bool> DebugCexCacheCheckBinding(
     cl::cat(SolvingCat));
 
 cl::opt<bool>
-    CexCacheTryAll("cex-cache-try-all", cl::init(false),
+    CexCacheTryAll("cex-cache-try-all", cl::init(true),
                    cl::desc("Try substituting all counterexamples before "
                             "asking the SMT solver (default=false)"),
                    cl::cat(SolvingCat));
@@ -86,6 +87,17 @@ class CexCachingSolver : public SolverImpl {
   
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
+  CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
+   const Array* arr = cache->CreateArray("str", 8);
+   std::vector<const Array*> objects = {arr};
+   std::vector< std::vector<unsigned char> > values = {{'g', 'o', 't','c','h','a','\0','b'}};
+   Assignment* binding = new Assignment (objects, values);
+   assignmentsTable.insert(binding);
+
+   std::vector< std::vector<unsigned char> > values1 = {{'g', 'o', 't','h','c','a','\0','b'}};
+   binding = new Assignment (objects, values1);
+   assignmentsTable.insert(binding);
+  }
   ~CexCachingSolver();
   
   bool computeTruth(const Query&, bool &isValid);
@@ -153,10 +165,16 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Otherwise, iterate through the set of current assignments to see if one
     // of them satisfies the query.
+ //   llvm::errs() << "Trying \n";
+    for(auto refExpr : key) {
+//        refExpr->dump();
+    }
     for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
            ie = assignmentsTable.end(); it != ie; ++it) {
       Assignment *a = *it;
+   //   a->dump();
       if (a->satisfies(key.begin(), key.end())) {
+  //      llvm::errs() << "Success!\n";
         result = a;
         return true;
       }
@@ -385,4 +403,7 @@ void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
 
 Solver *klee::createCexCachingSolver(Solver *_solver) {
   return new Solver(new CexCachingSolver(_solver));
+}
+Solver *klee::createCexCachingSolver(Solver *_solver, ArrayCache *cache) {
+  return new Solver(new CexCachingSolver(_solver,cache));
 }
