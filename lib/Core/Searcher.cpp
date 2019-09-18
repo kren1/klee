@@ -349,12 +349,13 @@ void
 PendingSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+
   std::vector<ExecutionState *> filteredAddedStates(addedStates.begin(), addedStates.end());
   auto firstPending = std::partition(filteredAddedStates.begin(),filteredAddedStates.end(),
-            [](const auto& es) {return !es->hasPending; });
+            [](const auto& es) {return !es->pendingConstraint; });
 
   std::vector<ExecutionState *> removedStatesLocal(removedStates.begin(), removedStates.end());
-  if(current && current->hasPending) {
+  if(current && current->pendingConstraint) {
       pendingStates.push_back(current);
       removedStatesLocal.push_back(current);
       current = nullptr;
@@ -367,11 +368,13 @@ PendingSearcher::update(ExecutionState *current,
       llvm::errs() << "Reviving pending state: ";
       bool solverResult;
       auto es = pendingStates[0];
+      assert(es->pendingConstraint);
+      assert(!es->pendingConstraint->isNull());
+      exec->solver->mayBeTrue(*es, *es->pendingConstraint, solverResult);
       pendingStates.erase(pendingStates.begin());
-      exec->solver->mayBeTrue(*es, es->pendingConstraint, solverResult);
       if(solverResult) {
-          exec->addConstraint(*es, es->pendingConstraint);
-          es->hasPending = false;
+          exec->addConstraint(*es, *es->pendingConstraint);
+          es->pendingConstraint = nullptr;
           baseSearcher->update(current, {es}, {});
           llvm::errs() << "success\n";
       } else {

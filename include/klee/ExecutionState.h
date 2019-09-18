@@ -74,8 +74,7 @@ private:
 
 public:
 
-  ref<Expr> pendingConstraint;
-  bool hasPending = false;
+  std::unique_ptr<ref<Expr>> pendingConstraint;
   // Execution - Control Flow specific
 
   /// @brief Pointer to instruction to be executed after the current

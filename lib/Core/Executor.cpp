@@ -1103,10 +1103,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     errs() << "Adding true and falste constraints \n";
-    trueState->pendingConstraint = condition;
-    falseState->pendingConstraint = Expr::createIsZero(condition);
-    trueState->hasPending = true;
-    falseState->hasPending = true;
+    trueState->pendingConstraint = std::make_unique<ref<Expr>>(condition);
+    falseState->pendingConstraint = std::make_unique<ref<Expr>>(Expr::createIsZero(condition));
 //    addConstraint(*trueState, condition);
 //    addConstraint(*falseState, Expr::createIsZero(condition));
 
@@ -2731,52 +2729,25 @@ void Executor::updateStates(ExecutionState *current) {
   
   bool solverResult;
   bool status;
-  if(current->hasPending) {
-      Query qr(current->constraints, current->pendingConstraint);
+  if(current->pendingConstraint) {
+      Query qr(current->constraints, *current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status ) {  
           errs() << ("current CEX cache HIT!\n") ;
-          addConstraint(*current,current->pendingConstraint);
-          current->hasPending = false;
+          addConstraint(*current, *current->pendingConstraint);
+          current->pendingConstraint = nullptr;
       }
-//         else terminateState(*current);
-//      else errs() << ("current CEX cache MISS!\n");
-
-//      solver->solver->mayBeTrue(qr, solverResult);
-//      if(solverResult) {
-//         llvm::errs() << "current is feasible \n";
-//         addConstraint(*current,current->pendingConstraint);
-//          
-//      }
-//      else {
-//          llvm::errs() << "current state is NOT feasible \n";
-//          terminateState(*current);
-//      }
-//      current->hasPending = false;
   }
 
   for(ExecutionState* current : addedStates) {
-      if(current->hasPending) {
-          Query qr(current->constraints, current->pendingConstraint);
+      if(current->pendingConstraint) {
+          Query qr(current->constraints, *current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
           if(status) {
               errs() << ("added CEX cache HIT!\n");
-              addConstraint(*current,current->pendingConstraint);
-              current->hasPending = false;
+              addConstraint(*current, *current->pendingConstraint);
+              current->pendingConstraint = nullptr;
           }
-//          else terminateState(*current);
-//          else errs() << ("added CEX cache MISS!\n");
-
-//          solver->solver->mayBeTrue(qr, solverResult);
-//          if(solverResult) {
-//              llvm::errs() << "addedState  is feasible \n";
-//              addConstraint(*current,current->pendingConstraint);
-//          }
-//          else {
-//              llvm::errs() << "added state is NOT feasible \n";
-//              terminateState(*current);
-//          }
-//          current->hasPending = false;
       }
   }
 
