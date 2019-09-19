@@ -39,6 +39,11 @@ cl::opt<bool>
                    cl::desc("Try substituting all counterexamples before "
                             "asking the SMT solver (default=false)"),
                    cl::cat(SolvingCat));
+cl::opt<bool>
+    CexCacheSeeds("cex-seeds", cl::init(false),
+                   cl::desc("Prepopulate cex cache"),
+                   cl::cat(SolvingCat));
+
 
 cl::opt<bool>
     CexCacheSuperSet("cex-cache-superset", cl::init(false),
@@ -88,6 +93,7 @@ class CexCachingSolver : public SolverImpl {
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
+   if(CexCacheSeeds) {
    const Array* arr = cache->CreateArray("msg", 8);
    std::vector<const Array*> objects = {arr};
    std::vector< std::vector<unsigned char> > values = {{'g', 'o', 't','c','h','a','\0','b'}};
@@ -117,6 +123,7 @@ public:
      cache->CreateArray("stdin-stat", 144),
      cache->CreateArray("model_version",4)}, values2);
    assignmentsTable.insert(binding);
+   }
   }
   ~CexCachingSolver();
   
