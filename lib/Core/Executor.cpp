@@ -2725,11 +2725,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 }
 
 void Executor::updateStates(ExecutionState *current) {
-  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
+//  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
   
   bool solverResult;
   bool status;
-  if(current->pendingConstraint) {
+  if(current && current->pendingConstraint) {
       Query qr(current->constraints, *current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status ) {  

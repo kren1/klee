@@ -83,15 +83,18 @@ namespace klee {
 
   inline ref<Expr> Assignment::evaluate(ref<Expr> e) { 
     AssignmentEvaluator v(*this);
-    return v.visit(e); 
+    auto ret = v.visit(e); 
+    return ret;
   }
 
   template<typename InputIterator>
   inline bool Assignment::satisfies(InputIterator begin, InputIterator end) {
     AssignmentEvaluator v(*this);
-    for (; begin!=end; ++begin)
-      if (!v.visit(*begin)->isTrue())
+    for (; begin!=end; ++begin) {
+      if (!v.visit(*begin)->isTrue()) {
         return false;
+      }
+    }
     return true;
   }
 }
