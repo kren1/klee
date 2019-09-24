@@ -1102,7 +1102,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    errs() << "Adding true and falste constraints \n";
+//    errs() << "Adding true and falste constraints \n";
     trueState->pendingConstraint = std::make_unique<ref<Expr>>(condition);
     falseState->pendingConstraint = std::make_unique<ref<Expr>>(Expr::createIsZero(condition));
 //    addConstraint(*trueState, condition);
