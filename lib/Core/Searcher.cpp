@@ -366,7 +366,7 @@ PendingSearcher::update(ExecutionState *current,
   baseSearcher->update(current, filteredAddedStates, removedStatesLocal);
   while(baseSearcher->empty() && !pendingStates.empty()) {
 //      llvm::errs() << "Reviving pending state: ";
-      bool solverResult;
+      bool solverResult = false;
       auto es = pendingStates[0];
       assert(es->pendingConstraint);
       assert(!es->pendingConstraint->isNull());
