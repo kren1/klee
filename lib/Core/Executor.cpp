@@ -961,23 +961,33 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           inhibitForking || 
           (MaxForks!=~0u && stats::forks >= MaxForks)) {
 
-	if (MaxMemoryInhibit && atMemoryLimit)
-	  klee_warning_once(0, "skipping fork (memory cap exceeded)");
-	else if (current.forkDisabled)
-	  klee_warning_once(0, "skipping fork (fork disabled on current path)");
-	else if (inhibitForking)
-	  klee_warning_once(0, "skipping fork (fork disabled globally)");
-	else 
-	  klee_warning_once(0, "skipping fork (max-forks reached)");
+          if (MaxMemoryInhibit && atMemoryLimit)
+            klee_warning_once(0, "skipping fork (memory cap exceeded)");
+          else if (current.forkDisabled)
+            klee_warning_once(0, "skipping fork (fork disabled on current path)");
+          else if (inhibitForking)
+            klee_warning_once(0, "skipping fork (fork disabled globally)");
+          else 
+            klee_warning_once(0, "skipping fork (max-forks reached)");
 
-        TimerStatIncrementer timer(stats::forkTime);
-        if (theRNG.getBool()) {
-          addConstraint(current, condition);
-          res = Solver::True;        
-        } else {
-          addConstraint(current, Expr::createIsZero(condition));
-          res = Solver::False;
-        }
+          //If we skip fork we just pick the state which has a cex hit
+          bool status = false, solverResult = false;
+
+          status = fastSolver->mayBeTrue(Query(current.constraints, condition), solverResult);
+          if(solverResult ) {  
+            addConstraint(current, condition);
+            res = Solver::True;        
+          } else {
+            status = fastSolver->mayBeTrue(Query(current.constraints, Expr::createIsZero(condition)), solverResult);
+            if(solverResult) {
+              addConstraint(current, Expr::createIsZero(condition));
+              res = Solver::False;
+            } else {
+                klee_warning("Both branches don't have a CEX hit when skipping fork");
+                exit(1);
+            }
+
+          }
       }
     }
   }
