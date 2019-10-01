@@ -984,7 +984,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
               res = Solver::False;
             } else {
                 klee_warning("Both branches don't have a CEX hit when skipping fork");
-                exit(1);
+    current.pc = current.prevPC;
+    terminateStateEarly(current, "CEX miss when skipping");
+    return StatePair(0, 0);
             }
 
           }
