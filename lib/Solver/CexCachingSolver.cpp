@@ -43,6 +43,11 @@ cl::opt<bool>
     CexCacheSeeds("cex-seeds", cl::init(false),
                    cl::desc("Prepopulate cex cache"),
                    cl::cat(SolvingCat));
+cl::opt<int>
+    CexClear("cex-clear", cl::init(0),
+                   cl::desc("Clear cex cache after"),
+                   cl::cat(SolvingCat));
+
 
 
 cl::opt<bool>
@@ -192,10 +197,6 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Otherwise, iterate through the set of current assignments to see if one
     // of them satisfies the query.
-//    llvm::errs() << "Trying \n";
-    for(auto refExpr : key) {
-  //      refExpr->dump();
-    }
     for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
            ie = assignmentsTable.end(); it != ie; ++it) {
       Assignment *a = *it;
@@ -205,6 +206,15 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
         result = a;
         return true;
       }
+    }
+    if(CexClear > 0 && assignmentsTable.size() > CexClear) {
+      llvm::errs() << "Clearing cex!\n";
+
+      cache.clear();
+      for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
+             ie = assignmentsTable.end(); it != ie; ++it)
+        delete *it;
+      assignmentsTable.clear();
     }
   } else {
     // FIXME: Which order? one is sure to be better.
