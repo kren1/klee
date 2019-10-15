@@ -454,7 +454,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->fastSolver = klee::createCexCachingSolver(createDummySolver(), &arrayCache);
+  this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
