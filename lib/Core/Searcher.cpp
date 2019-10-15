@@ -35,6 +35,7 @@
 #include <cassert>
 #include <fstream>
 #include <climits>
+#include <unordered_set>
 
 using namespace klee;
 using namespace llvm;
@@ -359,11 +360,13 @@ PendingSearcher::update(ExecutionState *current,
 
   auto firstRemovedPending = std::partition(removedStatesLocal.begin(),removedStatesLocal.end(),
             [](const auto& es) {return !es->pendingConstraint; });
-  auto it = firstRemovedPending;
-  while(it != removedStatesLocal.end()) {
-      std::remove(pendingStates.begin(), pendingStates.end(), *it);
-      it++;
-  }
+  std::unordered_set<ExecutionState*> removedPendingset(firstRemovedPending, removedStatesLocal.end());
+  pendingStates.erase(std::partition(pendingStates.begin(), pendingStates.end(),
+
+    [=](const auto& es) {return removedPendingset.count(es) == 0;})
+  , pendingStates.end());
+  
+
   removedStatesLocal.erase(firstRemovedPending, removedStatesLocal.end());
 
   if(current && current->pendingConstraint) {
