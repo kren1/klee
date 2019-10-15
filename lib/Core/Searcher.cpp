@@ -356,6 +356,16 @@ PendingSearcher::update(ExecutionState *current,
             [](const auto& es) {return !es->pendingConstraint; });
 
   std::vector<ExecutionState *> removedStatesLocal(removedStates.begin(), removedStates.end());
+
+  auto firstRemovedPending = std::partition(removedStatesLocal.begin(),removedStatesLocal.end(),
+            [](const auto& es) {return !es->pendingConstraint; });
+  auto it = firstRemovedPending;
+  while(it != removedStatesLocal.end()) {
+      std::remove(pendingStates.begin(), pendingStates.end(), *it);
+      it++;
+  }
+  removedStatesLocal.erase(firstRemovedPending, removedStatesLocal.end());
+
   if(current && current->pendingConstraint) {
       pendingStates.push_back(current);
       removedStatesLocal.push_back(current);
