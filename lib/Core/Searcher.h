@@ -170,6 +170,8 @@ namespace klee {
     Executor &executor;
 
   public:
+    //Has a pending state been hit when slecting state
+    static ExecutionState* hitPending;
     RandomPathSearcher(Executor &_executor);
     ~RandomPathSearcher();
 

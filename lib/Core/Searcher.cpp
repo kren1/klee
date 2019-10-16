@@ -264,10 +264,14 @@ RandomPathSearcher::RandomPathSearcher(Executor &_executor)
 RandomPathSearcher::~RandomPathSearcher() {
 }
 
+bool doubleHitPending = false;
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
   PTree::Node *n = executor.processTree->root;
+  PTree::Node *lastFlipNode = n;
+  bool leftFlip = true;
   while (!n->data) {
+  //  llvm::errs() << "enter: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
     if (!n->left) {
       n = n->right;
     } else if (!n->right) {
@@ -278,10 +282,28 @@ ExecutionState &RandomPathSearcher::selectState() {
         bits = 32;
       }
       --bits;
+      lastFlipNode = n;
       n = (flips&(1<<bits)) ? n->left : n->right;
+      leftFlip = (n == lastFlipNode->left);
     }
+ //   llvm::errs() << "after flip: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
+ //   if(n->data) llvm::errs() << "pending: " << (bool)n->data->pendingConstraint<<  "last flip: " << lastFlipNode << " isLeft" << leftFlip << "\n";
+    if(n->data && n->data->pendingConstraint) {
+        hitPending = n->data;
+        assert(lastFlipNode->right);
+        assert(lastFlipNode->left);
+        n = leftFlip ? lastFlipNode->right : lastFlipNode->left;
+//        lastFlipNode = n;
+    }
+    assert(n && "n is null");
+//    llvm::errs() << "after corection: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
   }
-
+  if(n->data->pendingConstraint) {
+      klee_warning("Random path returned pending state hitPending");
+      doubleHitPending = true;
+  }
+  
+  //assert(!n->data->pendingConstraint && "Random Path returned pending");
   return *n->data;
 }
 
@@ -292,7 +314,7 @@ RandomPathSearcher::update(ExecutionState *current,
 }
 
 bool RandomPathSearcher::empty() { 
-  return executor.states.empty(); 
+  return executor.states.empty() || (hitPending != nullptr); 
 }
 
 ///
@@ -335,7 +357,6 @@ ExecutionState& MergingSearcher::selectState() {
 PendingSearcher::PendingSearcher(Searcher *_baseSearcher,
                                    Executor* _exec) 
   : baseSearcher(_baseSearcher), exec(_exec) {
-  
 }
 
 PendingSearcher::~PendingSearcher() {
@@ -343,14 +364,23 @@ PendingSearcher::~PendingSearcher() {
 }
 
 ExecutionState &PendingSearcher::selectState() {
-  return baseSearcher->selectState();
+  auto es =  &baseSearcher->selectState();
+  if(doubleHitPending) {
+      doubleHitPending = false;
+      llvm::errs() << "hitPending " << RandomPathSearcher::hitPending << "\n";
+      this->update(nullptr,{}, {});
+      es =  &baseSearcher->selectState();
+  }
+  assert(!es->pendingConstraint && "pending searcher returned pending constriant");
+  return *es;
 }
+
+ExecutionState* RandomPathSearcher::hitPending = nullptr;
 
 void
 PendingSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
-//  llvm::errs() << "Adding " << addedStates.size() << " removing: " << removedStates.size() << "\n";
 
   std::vector<ExecutionState *> filteredAddedStates(addedStates.begin(), addedStates.end());
   auto firstPending = std::partition(filteredAddedStates.begin(),filteredAddedStates.end(),
@@ -380,11 +410,20 @@ PendingSearcher::update(ExecutionState *current,
   while(baseSearcher->empty() && !pendingStates.empty()) {
 //      llvm::errs() << "Reviving pending state: ";
       bool solverResult = false;
-      auto es = pendingStates[0];
+      if(RandomPathSearcher::hitPending != nullptr) {
+//        errs() << "hit pending: " << RandomPathSearcher::hitPending << "\n";
+        auto hIt = std::find(pendingStates.begin(), pendingStates.end(), RandomPathSearcher::hitPending);
+        *hIt = pendingStates.back();
+        pendingStates.back() = RandomPathSearcher::hitPending;
+        RandomPathSearcher::hitPending = nullptr;
+
+      }
+      auto es = pendingStates.back();
+//      errs() << "es: " << es << "\n";
       assert(es->pendingConstraint);
       assert(!es->pendingConstraint->isNull());
       exec->solver->mayBeTrue(*es, *es->pendingConstraint, solverResult);
-      pendingStates.erase(pendingStates.begin());
+      pendingStates.pop_back();
       if(solverResult) {
           exec->addConstraint(*es, *es->pendingConstraint);
           es->pendingConstraint = nullptr;
