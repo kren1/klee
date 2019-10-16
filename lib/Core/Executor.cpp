@@ -974,14 +974,16 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           bool status = false, solverResult = false;
 
           status = fastSolver->mayBeTrue(Query(current.constraints, condition), solverResult);
-          if(solverResult ) {  
+          if( status && solverResult ) {  
             addConstraint(current, condition);
             res = Solver::True;        
+//            errs() << ("skip CEX cache HIT on true!\n") ;
           } else {
             status = fastSolver->mayBeTrue(Query(current.constraints, Expr::createIsZero(condition)), solverResult);
-            if(solverResult) {
+            if( status && solverResult) {
               addConstraint(current, Expr::createIsZero(condition));
               res = Solver::False;
+ //             errs() << ("skip CEX cache HIT on false!\n") ;
             } else {
                 klee_warning("Both branches don't have a CEX hit when skipping fork");
     current.pc = current.prevPC;
@@ -2739,7 +2741,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 void Executor::updateStates(ExecutionState *current) {
 //  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
   
-  bool solverResult;
+  bool solverResult = false;
   bool status;
   if(current && current->pendingConstraint) {
       Query qr(current->constraints, *current->pendingConstraint);
@@ -2752,7 +2754,7 @@ void Executor::updateStates(ExecutionState *current) {
   }
 
   for(ExecutionState* current : addedStates) {
-      if(current->pendingConstraint) {
+      if(!solverResult && current->pendingConstraint) {
           Query qr(current->constraints, *current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
           if(status && solverResult) {
