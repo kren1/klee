@@ -408,7 +408,7 @@ PendingSearcher::update(ExecutionState *current,
 
   baseSearcher->update(current, filteredAddedStates, removedStatesLocal);
   while(baseSearcher->empty() && !pendingStates.empty()) {
-//      llvm::errs() << "Reviving pending state: ";
+      llvm::errs() << "Reviving pending state: ";
       bool solverResult = false;
       if(RandomPathSearcher::hitPending != nullptr) {
 //        errs() << "hit pending: " << RandomPathSearcher::hitPending << "\n";
@@ -428,13 +428,21 @@ PendingSearcher::update(ExecutionState *current,
           exec->addConstraint(*es, *es->pendingConstraint);
           es->pendingConstraint = nullptr;
           baseSearcher->update(nullptr, {es}, {});
-//          llvm::errs() << "success\n";
+          llvm::errs() << "success\n";
       } else {
-//          llvm::errs() << "killing it\n";
+          llvm::errs() << "killing it\n";
           exec->terminateState(*es);
       }
+  llvm::errs() << "Pending states: " << pendingStates.size() << " base empty:"  << baseSearcher->empty() <<  "\n";
+        errs() << "hit pending: " << RandomPathSearcher::hitPending << "\n";
  
   }
+  static int cnt = 0;
+  if(cnt == 1 || true) {
+  llvm::errs() << "Pending states: " << pendingStates.size() << "\n";
+//  baseSearcher->printName(llvm::errs());
+  }
+  cnt = (cnt + 1) % 10000;
 }
 
 

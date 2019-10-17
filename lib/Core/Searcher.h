@@ -107,7 +107,7 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty() { return states.empty(); }
     void printName(llvm::raw_ostream &os) {
-      os << "BFSSearcher\n";
+      os << " BFSSearcher size: " << states.size() << "\n";
     }
   };
 
