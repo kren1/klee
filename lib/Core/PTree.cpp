@@ -16,7 +16,8 @@
 
 using namespace klee;
 
-PTree::PTree(const data_type &root) : root(new Node(nullptr, root)) {}
+//Root node belongs to all sets, so all 3 bits are set.
+PTree::PTree(const data_type &root) : root(PTreeNodePtr(new Node(nullptr, root),7 )) {}
 
 std::pair<PTreeNode*, PTreeNode*>
 PTree::split(Node *n, 
@@ -25,6 +26,8 @@ PTree::split(Node *n,
   assert(n && !n->left.getPointer() && !n->right.getPointer());
   n->left = PTreeNodePtr(new Node(n, leftData));
   n->right = PTreeNodePtr(new Node(n, rightData));
+  assert(n->left.getPointer() != n);
+  assert(n->right.getPointer() != n);
   return std::make_pair(n->left.getPointer(), n->right.getPointer());
 }
 
@@ -56,7 +59,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   os << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
   os << "\tedge [arrowsize=.3]\n";
   std::vector<PTree::Node*> stack;
-  stack.push_back(root);
+  stack.push_back(root.getPointer());
   while (!stack.empty()) {
     PTree::Node *n = stack.back();
     stack.pop_back();
@@ -65,11 +68,13 @@ void PTree::dump(llvm::raw_ostream &os) {
       os << ",fillcolor=green";
     os << "];\n";
     if (n->left.getPointer()) {
-      os << "\tn" << n << " -> n" << n->left.getPointer() << ";\n";
+      os << "\tn" << n << " -> n" << n->left.getPointer();
+      os << " [label=" << (int)n->left.getInt() << "];\n";
       stack.push_back(n->left.getPointer());
     }
     if (n->right.getPointer()) {
-      os << "\tn" << n << " -> n" << n->right.getPointer() << ";\n";
+      os << "\tn" << n << " -> n" << n->right.getPointer();
+      os << " [label=" << (int)n->right.getInt() << "];\n";
       stack.push_back(n->right.getPointer());
     }
   }

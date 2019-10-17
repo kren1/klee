@@ -168,10 +168,11 @@ namespace klee {
 
   class RandomPathSearcher : public Searcher {
     Executor &executor;
+    int size = 0;
+    static int numRPSearchers;
+    const uint8_t idBitMask;
 
   public:
-    //Has a pending state been hit when slecting state
-    static ExecutionState* hitPending;
     RandomPathSearcher(Executor &_executor);
     ~RandomPathSearcher();
 
@@ -240,22 +241,23 @@ namespace klee {
   };
 
   class PendingSearcher : public Searcher {
-    Searcher *baseSearcher;
-    std::vector<ExecutionState*> pendingStates;
+    Searcher *baseNormalSearcher;
+    Searcher *basePendingSearcher;
     Executor* exec;
 
   public:
-    PendingSearcher(Searcher *baseSearcher, Executor* exec);
+    PendingSearcher(Searcher *baseNormalSearcher, Searcher *basePendingSearcher, Executor* exec);
     ~PendingSearcher();
 
     ExecutionState &selectState();
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseSearcher->empty(); }
+    bool empty() { return baseNormalSearcher->empty() && basePendingSearcher->empty(); }
     void printName(llvm::raw_ostream &os) {
       os << "<PendingSearcher> ";
-      baseSearcher->printName(os);
+      baseNormalSearcher->printName(os);
+      basePendingSearcher->printName(os);
       os << "</PendingSearcher>\n";
     }
   };

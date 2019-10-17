@@ -2999,7 +2999,8 @@ void Executor::run(ExecutionState &initialState) {
   }
 
   searcher = constructUserSearcher(*this);
-  searcher = new PendingSearcher(searcher, this);
+  auto pendingStateSearcher = new DFSSearcher();
+  searcher = new PendingSearcher(searcher, pendingStateSearcher, this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
@@ -3895,7 +3896,7 @@ void Executor::runFunctionAsMain(Function *f,
   initializeGlobals(*state);
 
   processTree = new PTree(state);
-  state->ptreeNode = processTree->root;
+  state->ptreeNode = processTree->root.getPointer();
   run(*state);
   delete processTree;
   processTree = 0;
