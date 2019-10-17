@@ -264,46 +264,23 @@ RandomPathSearcher::RandomPathSearcher(Executor &_executor)
 RandomPathSearcher::~RandomPathSearcher() {
 }
 
-bool doubleHitPending = false;
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
   PTree::Node *n = executor.processTree->root;
-  PTree::Node *lastFlipNode = n;
-  bool leftFlip = true;
   while (!n->data) {
-  //  llvm::errs() << "enter: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
-    if (!n->left) {
-      n = n->right;
-    } else if (!n->right) {
-      n = n->left;
+    if (!n->left.getPointer()) {
+      n = n->right.getPointer();
+    } else if (!n->right.getPointer()) {
+      n = n->left.getPointer();
     } else {
       if (bits==0) {
         flips = theRNG.getInt32();
         bits = 32;
       }
       --bits;
-      lastFlipNode = n;
-      n = (flips&(1<<bits)) ? n->left : n->right;
-      leftFlip = (n == lastFlipNode->left);
+      n = (flips&(1<<bits)) ? n->left.getPointer() : n->right.getPointer();
     }
- //   llvm::errs() << "after flip: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
- //   if(n->data) llvm::errs() << "pending: " << (bool)n->data->pendingConstraint<<  "last flip: " << lastFlipNode << " isLeft" << leftFlip << "\n";
-    if(n->data && n->data->pendingConstraint) {
-        hitPending = n->data;
-        assert(lastFlipNode->right);
-        assert(lastFlipNode->left);
-        n = leftFlip ? lastFlipNode->right : lastFlipNode->left;
-//        lastFlipNode = n;
-    }
-    assert(n && "n is null");
-//    llvm::errs() << "after corection: " << n << " left:" << n->left << " right: " << n->right << " data: " << n->data << "\n";
   }
-  if(n->data->pendingConstraint) {
-      klee_warning("Random path returned pending state hitPending");
-      doubleHitPending = true;
-  }
-  
-  //assert(!n->data->pendingConstraint && "Random Path returned pending");
   return *n->data;
 }
 
@@ -364,15 +341,7 @@ PendingSearcher::~PendingSearcher() {
 }
 
 ExecutionState &PendingSearcher::selectState() {
-  auto es =  &baseSearcher->selectState();
-  if(doubleHitPending) {
-      doubleHitPending = false;
-      llvm::errs() << "hitPending " << RandomPathSearcher::hitPending << "\n";
-      this->update(nullptr,{}, {});
-      es =  &baseSearcher->selectState();
-  }
-  assert(!es->pendingConstraint && "pending searcher returned pending constriant");
-  return *es;
+  return baseSearcher->selectState();
 }
 
 ExecutionState* RandomPathSearcher::hitPending = nullptr;

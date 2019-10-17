@@ -11,9 +11,13 @@
 #define KLEE_PTREE_H
 
 #include "klee/Expr/Expr.h"
+#include "llvm/ADT/PointerIntPair.h"
 
 namespace klee {
   class ExecutionState;
+  class PTreeNode;
+  using PTreeNodePtr = llvm::PointerIntPair<PTreeNode*,3,uint8_t>;
+
 
   class PTree { 
     typedef ExecutionState* data_type;
@@ -37,14 +41,15 @@ namespace klee {
     friend class PTree;
   public:
     PTreeNode *parent = nullptr;
-    PTreeNode *left = nullptr;
-    PTreeNode *right = nullptr;
+    PTreeNodePtr left; 
+    PTreeNodePtr right ;
     ExecutionState *data = nullptr;
 
   private:
     PTreeNode(PTreeNode * parent, ExecutionState * data);
     ~PTreeNode() = default;
   };
+
 }
 
 #endif /* KLEE_PTREE_H */
