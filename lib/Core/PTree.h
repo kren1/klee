@@ -24,7 +24,7 @@ namespace klee {
 
   public:
     typedef class PTreeNode Node;
-    Node *root;
+    PTreeNodePtr root;
 
     explicit PTree(const data_type &_root);
     ~PTree() = default;

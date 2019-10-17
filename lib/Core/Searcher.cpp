@@ -254,21 +254,33 @@ bool WeightedRandomSearcher::empty() {
   return states->empty(); 
 }
 
+int RandomPathSearcher::numRPSearchers = 0;
+
 ///
 RandomPathSearcher::RandomPathSearcher(Executor &_executor)
-  : executor(_executor) {
+  : executor(_executor), idBitMask(1 << numRPSearchers) {
+      assert(numRPSearchers < 3 && "Too many RandomPath searcher created (pointer bit limit)");
+      numRPSearchers++;
 }
 
 RandomPathSearcher::~RandomPathSearcher() {
 }
 
+#define IS_OUR_NODE_VALID(n) ((((n).getInt() & idBitMask) != 0) && ((n).getPointer() != nullptr))
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
-  PTree::Node *n = executor.processTree->root;
+  assert(executor.processTree->root.getInt() & idBitMask && "Root should belong to the searcher");
+  PTree::Node *n = executor.processTree->root.getPointer();
   while (!n->data) {
-    if (!n->left.getPointer()) {
+    if (!IS_OUR_NODE_VALID(n->left)) {
+      if(!IS_OUR_NODE_VALID(n->right)) 
+          errs() << "n parent " << n->parent << "\n";
+      assert(IS_OUR_NODE_VALID(n->right) && "Both left and right nodes invalid");
+      assert(n != n->right.getPointer());
       n = n->right.getPointer();
-    } else if (!n->right.getPointer()) {
+    } else if (!IS_OUR_NODE_VALID(n->right)) {
+      assert(IS_OUR_NODE_VALID(n->left) && "Both right and left nodes invalid");
+      assert(n != n->left.getPointer());
       n = n->left.getPointer();
     } else {
       if (bits==0) {
@@ -276,7 +288,7 @@ ExecutionState &RandomPathSearcher::selectState() {
         bits = 32;
       }
       --bits;
-      n = (flips&(1<<bits)) ? n->left.getPointer() : n->right.getPointer();
+      n = ((flips&(1<<bits)) ? n->left : n->right).getPointer();
     }
   }
 
@@ -287,10 +299,57 @@ void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {
+    size = size + addedStates.size() - removedStates.size();
+    if(current != nullptr) {
+      PTreeNode *pnode = current->ptreeNode, *parent = pnode->parent;
+      if(pnode != executor.processTree->root.getPointer()) { //handle root note
+      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+      while(!IS_OUR_NODE_VALID(*childPtr))
+      {
+        childPtr->setInt(childPtr->getInt() | idBitMask);
+        pnode = parent;
+        parent = pnode->parent;
+        if(parent)
+          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+        else break;
+      } 
+      }
+    }
+
+    for(auto es : addedStates) {
+      PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+      if(pnode == executor.processTree->root.getPointer()) continue; //handle root note
+      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+      do {
+        assert(!IS_OUR_NODE_VALID(*childPtr) && "Claiming PTree child already ours");
+        childPtr->setInt(childPtr->getInt() | idBitMask);
+        pnode = parent;
+        parent = pnode->parent;
+        if(parent)
+          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+        else break;
+      } while(!IS_OUR_NODE_VALID(*childPtr));
+    }
+
+    for(auto es : removedStates) {
+      PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+      
+      do {
+        assert(IS_OUR_NODE_VALID(*childPtr) && "Removing pTree child not ours");
+        childPtr->setInt(childPtr->getInt() &  ~idBitMask);
+        pnode = parent;
+        parent = pnode->parent;
+        if(parent)
+          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
+        else break;
+      } while(!IS_OUR_NODE_VALID(pnode->left) && !IS_OUR_NODE_VALID(pnode->right));
+
+    }
 }
 
 bool RandomPathSearcher::empty() { 
-  return executor.states.empty(); 
+  return size == 0; 
 }
 
 ///

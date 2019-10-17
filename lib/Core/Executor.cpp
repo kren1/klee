@@ -3848,7 +3848,7 @@ void Executor::runFunctionAsMain(Function *f,
   initializeGlobals(*state);
 
   processTree = new PTree(state);
-  state->ptreeNode = processTree->root;
+  state->ptreeNode = processTree->root.getPointer();
   run(*state);
   delete processTree;
   processTree = 0;

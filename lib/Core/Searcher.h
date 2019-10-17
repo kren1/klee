@@ -168,6 +168,9 @@ namespace klee {
 
   class RandomPathSearcher : public Searcher {
     Executor &executor;
+    int size = 0;
+    static int numRPSearchers;
+    const uint8_t idBitMask;
 
   public:
     RandomPathSearcher(Executor &_executor);
