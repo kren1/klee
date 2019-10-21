@@ -102,6 +102,7 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
+    pendingConstraint(state.pendingConstraint),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),

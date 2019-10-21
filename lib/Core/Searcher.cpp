@@ -406,18 +406,20 @@ ExecutionState &PendingSearcher::selectState() {
   bool solverResult = false, status = false;
   while(baseNormalSearcher->empty()) {
       assert(!basePendingSearcher->empty() && "Both pending and normal searcher ran out of states");
-      llvm::errs() << "Reviving pending state: ";
+//      llvm::errs() << "Reviving pending state: ";
       auto& es = basePendingSearcher->selectState();
-      assert(es.pendingConstraint != nullptr);
-      assert(!es.pendingConstraint->isNull());
-      status = exec->solver->mayBeTrue(es, *es.pendingConstraint, solverResult);
+      assert(!es.pendingConstraint.isNull());
+      ref<Expr> expr = es.pendingConstraint;
+      es.pendingConstraint = nullptr;
+      assert(expr->getWidth());
+      status = exec->solver->mayBeTrue(es, expr, solverResult);
       if(status && solverResult) {
-          exec->addConstraint(es, *es.pendingConstraint);
-          es.pendingConstraint = nullptr;
+          exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
-          llvm::errs() << "success\n";
+          basePendingSearcher->update(nullptr,{}, {&es});
+ //         llvm::errs() << "success\n";
       } else {
-          llvm::errs() << "killing it\n";
+ //         llvm::errs() << "killing it\n";
           basePendingSearcher->update(nullptr,{}, {&es});
           exec->processTree->remove(es.ptreeNode);
           auto it2 = exec->states.find(&es);
@@ -436,10 +438,10 @@ PendingSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
   if(addedStates.size() > 0 || removedStates.size() > 0) {
-      errs() << "Adding " << addedStates.size() << " Removing " << removedStates.size() << "\n"; 
+  //    errs() << "Adding " << addedStates.size() << " Removing " << removedStates.size() << "\n"; 
   }
 
-  auto is_pending = [](const auto& es) {return es->pendingConstraint  != nullptr; }; 
+  auto is_pending = [](const auto& es) {return !es->pendingConstraint.isNull(); }; 
   std::vector<ExecutionState* > addedN, addedP, removedN, removedP;
 
   for(const auto& es : addedStates) {
@@ -460,7 +462,7 @@ PendingSearcher::update(ExecutionState *current,
       removedN.push_back(current);
       addedP.push_back(current);
 //      current = nullptr;
-      errs() << "Current nulled\n";
+//      errs() << "Current nulled\n";
   }
   
   baseNormalSearcher->update(current, addedN, removedN);

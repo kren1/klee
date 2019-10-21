@@ -1117,8 +1117,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 //    errs() << "Adding true and falste constraints \n";
-    trueState->pendingConstraint = std::make_unique<ref<Expr>>(condition);
-    falseState->pendingConstraint = std::make_unique<ref<Expr>>(Expr::createIsZero(condition));
+    trueState->pendingConstraint = condition;
+    falseState->pendingConstraint = Expr::createIsZero(condition);
 //    addConstraint(*trueState, condition);
 //    addConstraint(*falseState, Expr::createIsZero(condition));
 
@@ -2743,23 +2743,23 @@ void Executor::updateStates(ExecutionState *current) {
   
   bool solverResult = false;
   bool status;
-  if(current && current->pendingConstraint) {
-      Query qr(current->constraints, *current->pendingConstraint);
+  if(current && !current->pendingConstraint.isNull()) {
+      Query qr(current->constraints, current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status && solverResult ) {  
           errs() << ("current CEX cache HIT!\n") ;
-          addConstraint(*current, *current->pendingConstraint);
+          addConstraint(*current, current->pendingConstraint);
           current->pendingConstraint = nullptr;
       }
   }
 
   for(ExecutionState* current : addedStates) {
-      if(!solverResult && current->pendingConstraint) {
-          Query qr(current->constraints, *current->pendingConstraint);
+      if(!solverResult && !current->pendingConstraint.isNull()) {
+          Query qr(current->constraints, current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
           if(status && solverResult) {
               errs() << ("added CEX cache HIT!\n");
-              addConstraint(*current, *current->pendingConstraint);
+              addConstraint(*current, current->pendingConstraint);
               current->pendingConstraint = nullptr;
           }
       }
@@ -2999,7 +2999,8 @@ void Executor::run(ExecutionState &initialState) {
   }
 
   searcher = constructUserSearcher(*this);
-  auto pendingStateSearcher = new DFSSearcher();
+  auto pendingStateSearcher = constructUserSearcher(*this);
+//  auto pendingStateSearcher = new DFSSearcher();
   searcher = new PendingSearcher(searcher, pendingStateSearcher, this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
