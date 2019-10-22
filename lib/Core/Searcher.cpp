@@ -296,6 +296,17 @@ ExecutionState &RandomPathSearcher::selectState() {
   return *n->data;
 }
 
+std::vector<ExecutionState *> RandomPathSearcher::selectForDelition(int size) {
+    errs() << "RP Deliting " << size << " states\n";
+    std::vector<ExecutionState* > ret;
+    ret.reserve(size);
+    for(auto& es : executor.states) {
+        size--;
+        if(size < 1) break;
+        ret.push_back(es);
+    }
+    return ret;
+}
 void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
@@ -348,6 +359,7 @@ RandomPathSearcher::update(ExecutionState *current,
       } while(!IS_OUR_NODE_VALID(pnode->left) && !IS_OUR_NODE_VALID(pnode->right));
 
     }
+
 }
 
 bool RandomPathSearcher::empty() { 
@@ -399,6 +411,47 @@ PendingSearcher::PendingSearcher(Searcher *_baseNormalSearcher, Searcher* _baseP
 PendingSearcher::~PendingSearcher() {
   delete baseNormalSearcher;
   delete basePendingSearcher;
+}
+
+
+std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
+    errs() << "Deliting " << size << " states\n";
+    int revived = 0, killed = 0;
+
+    while(!basePendingSearcher->empty() && size > 0) {
+      auto& es = basePendingSearcher->selectState();
+      assert(!es.pendingConstraint.isNull());
+      ref<Expr> expr = es.pendingConstraint;
+      es.pendingConstraint = nullptr;
+      assert(expr->getWidth());
+      bool status = false, solverResult = false;
+      status = exec->solver->mayBeTrue(es, expr, solverResult);
+      if(status && solverResult) {
+          exec->addConstraint(es, expr);
+          baseNormalSearcher->update(nullptr, {&es}, {});
+          basePendingSearcher->update(nullptr,{}, {&es});
+          revived++;
+ //         llvm::errs() << "success\n";
+      } else {
+ //         llvm::errs() << "killing it\n";
+          killed++;
+          size--;
+          basePendingSearcher->update(nullptr,{}, {&es});
+          exec->processTree->remove(es.ptreeNode);
+          auto it2 = exec->states.find(&es);
+          assert(it2!=exec->states.end());
+          exec->states.erase(it2);
+          delete &es;
+      }
+
+    }
+    errs() << "==== Deleted " << killed << " and revived " << revived << "\n";
+
+    //assert(!basePendingSearcher->empty() && "TODO delete more states than are pending");
+  //  if(basePendingSearcher->empty()) {
+  //      klee_warning("Deleted as many pending states as possible");
+  //  }
+    return baseNormalSearcher->selectForDelition(size);
 }
 
 ExecutionState &PendingSearcher::selectState() {

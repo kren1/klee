@@ -40,6 +40,7 @@ namespace klee {
     virtual void update(ExecutionState *current,
                         const std::vector<ExecutionState *> &addedStates,
                         const std::vector<ExecutionState *> &removedStates) = 0;
+    virtual std::vector<ExecutionState *> selectForDelition(int size) { return {}; };
 
     virtual bool empty() = 0;
 
@@ -177,12 +178,15 @@ namespace klee {
     ~RandomPathSearcher();
 
     ExecutionState &selectState();
+    std::vector<ExecutionState *> selectForDelition(int size);
+
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "RandomPathSearcher\n";
+
+      os << "(RP " << size << ")";
     }
   };
 
@@ -250,6 +254,7 @@ namespace klee {
     ~PendingSearcher();
 
     ExecutionState &selectState();
+    std::vector<ExecutionState *> selectForDelition(int size);
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);

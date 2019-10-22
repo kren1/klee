@@ -2899,6 +2899,10 @@ void Executor::checkMemoryUsage() {
           std::swap(arr[idx], arr[N - 1]);
           terminateStateEarly(*arr[N - 1], "Memory limit exceeded.");
         }
+      } else {
+        for(auto& es : searcher->selectForDelition(states.size() / 3)) {
+            terminateStateEarly(*es, "At memory limit");
+        }
       }
       atMemoryLimit = true;
     } else {
