@@ -58,6 +58,7 @@ void PTree::remove(Node *n) {
     if (!parent) {
       // We're at the root.
       root = child;
+      root.setInt(7);
     } else {
       if (n == parent->left.getPointer()) {
         parent->left = child;
