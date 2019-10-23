@@ -346,6 +346,10 @@ RandomPathSearcher::update(ExecutionState *current,
 
     for(auto es : removedStates) {
       PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+      if(pnode == executor.processTree->root.getPointer()) { //handle root
+          size++;
+          continue;
+      }
       auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
       
       do {
