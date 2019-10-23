@@ -419,6 +419,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     int revived = 0, killed = 0;
 
     while(!basePendingSearcher->empty() && size > 0) {
+      if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
       assert(!es.pendingConstraint.isNull());
       ref<Expr> expr = es.pendingConstraint;
