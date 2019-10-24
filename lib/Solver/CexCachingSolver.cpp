@@ -43,7 +43,7 @@ cl::opt<bool>
     CexCacheSeeds("cex-seeds", cl::init(false),
                    cl::desc("Prepopulate cex cache"),
                    cl::cat(SolvingCat));
-cl::opt<int>
+cl::opt<unsigned>
     CexClear("cex-clear", cl::init(0),
                    cl::desc("Clear cex cache after"),
                    cl::cat(SolvingCat));

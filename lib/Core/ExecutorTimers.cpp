@@ -11,6 +11,7 @@
 #include "Executor.h"
 #include "ExecutorTimerInfo.h"
 #include "PTree.h"
+#include "Searcher.h"
 #include "StatsTracker.h"
 
 #include "klee/ExecutionState.h"
@@ -133,9 +134,15 @@ void Executor::processTimers(ExecutionState *current,
         }
       }
     }
+    //If we haven't covered anything new in a while, try to revieve some pending states
+    //This aims to catch infinite loops
+    
 
     timerTicks = 0;
     callsWithoutCheck = 0;
+  }
+  if(current->instsSinceCovNew == 50000000) {
+        searcher->selectForDelition(states.size() / 5);
   }
 }
 

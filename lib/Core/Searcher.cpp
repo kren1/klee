@@ -36,6 +36,7 @@
 #include <fstream>
 #include <climits>
 #include <unordered_set>
+#include <chrono>
 
 using namespace klee;
 using namespace llvm;
@@ -421,7 +422,8 @@ PendingSearcher::~PendingSearcher() {
 std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     errs() << "Deliting " << size << " states\n";
     int revived = 0, killed = 0;
-
+ 
+    exec->solver->setTimeout(time::Span(std::chrono::seconds(1)));
     while(!basePendingSearcher->empty() && size > 0) {
       if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
@@ -450,6 +452,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
       }
 
     }
+    exec->solver->setTimeout(time::Span());
     errs() << "==== Deleted " << killed << " and revived " << revived << "\n";
 
     //assert(!basePendingSearcher->empty() && "TODO delete more states than are pending");
