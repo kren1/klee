@@ -40,6 +40,7 @@
 
 using namespace klee;
 using namespace llvm;
+using namespace std::literals::chrono_literals;
 
 
 namespace klee {
@@ -423,7 +424,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     errs() << "Deliting " << size << " states\n";
     int revived = 0, killed = 0;
  
-    exec->solver->setTimeout(time::Span(std::chrono::seconds(1)));
+    exec->solver->setTimeout(time::Span(1s));
     while(!basePendingSearcher->empty() && size > 0) {
       if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
@@ -465,6 +466,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
 ExecutionState &PendingSearcher::selectState() {
 
   bool solverResult = false, status = false;
+  exec->solver->setTimeout(time::Span(1s));
   while(baseNormalSearcher->empty()) {
       assert(!basePendingSearcher->empty() && "Both pending and normal searcher ran out of states");
 //      llvm::errs() << "Reviving pending state: ";
@@ -489,6 +491,7 @@ ExecutionState &PendingSearcher::selectState() {
           delete &es;
       }
   }
+  exec->solver->setTimeout(time::Span());
 
 
   return baseNormalSearcher->selectState();
