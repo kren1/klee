@@ -47,6 +47,12 @@ namespace klee {
   extern RNG theRNG;
 }
 
+cl::opt<std::string> MaxReviveTime(
+    "max-revive-time",
+    cl::desc("Maximum time to spend reviving states (default unlimited)")
+    );
+
+
 Searcher::~Searcher() {
 }
 
@@ -412,6 +418,7 @@ ExecutionState& MergingSearcher::selectState() {
 PendingSearcher::PendingSearcher(Searcher *_baseNormalSearcher, Searcher* _basePendingSearcher,
                                    Executor* _exec) 
   : baseNormalSearcher(_baseNormalSearcher), basePendingSearcher(_basePendingSearcher), exec(_exec) {
+      maxReviveTime = time::Span(MaxReviveTime);
 }
 
 PendingSearcher::~PendingSearcher() {
@@ -424,7 +431,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     errs() << "Deliting " << size << " states\n";
     int revived = 0, killed = 0;
  
-    exec->solver->setTimeout(time::Span(1s));
+    exec->solver->setTimeout(maxReviveTime);
     while(!basePendingSearcher->empty() && size > 0) {
       if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
@@ -466,7 +473,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
 ExecutionState &PendingSearcher::selectState() {
 
   bool solverResult = false, status = false;
-  exec->solver->setTimeout(time::Span(1s));
+  exec->solver->setTimeout(maxReviveTime);
   while(baseNormalSearcher->empty()) {
       assert(!basePendingSearcher->empty() && "Both pending and normal searcher ran out of states");
 //      llvm::errs() << "Reviving pending state: ";

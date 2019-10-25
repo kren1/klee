@@ -248,6 +248,7 @@ namespace klee {
     Searcher *baseNormalSearcher;
     Searcher *basePendingSearcher;
     Executor* exec;
+    time::Span maxReviveTime;
 
   public:
     PendingSearcher(Searcher *baseNormalSearcher, Searcher *basePendingSearcher, Executor* exec);
