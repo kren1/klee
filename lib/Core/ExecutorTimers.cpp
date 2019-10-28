@@ -142,7 +142,7 @@ void Executor::processTimers(ExecutionState *current,
     callsWithoutCheck = 0;
   }
   if(current->instsSinceCovNew == 50000000) {
-        searcher->selectForDelition(states.size() / 5);
+        searcher->selectForDelition((states.size() / 5) + 1);
   }
 }
 
