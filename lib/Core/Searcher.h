@@ -259,7 +259,7 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseNormalSearcher->empty() && basePendingSearcher->empty(); }
+    bool empty();
     void printName(llvm::raw_ostream &os) {
       os << "<PendingSearcher> ";
       baseNormalSearcher->printName(os);

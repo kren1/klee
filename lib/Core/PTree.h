@@ -11,10 +11,10 @@
 #define KLEE_PTREE_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/ExecutionState.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace klee {
-  class ExecutionState;
   class PTreeNode;
   using PTreeNodePtr = llvm::PointerIntPair<PTreeNode*,3,uint8_t>;
 

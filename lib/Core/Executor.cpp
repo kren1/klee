@@ -3005,12 +3005,13 @@ void Executor::run(ExecutionState &initialState) {
   searcher = constructUserSearcher(*this);
   auto pendingStateSearcher = constructUserSearcher(*this);
 //  auto pendingStateSearcher = new DFSSearcher();
+//  searcher = new DFSSearcher();
   searcher = new PendingSearcher(searcher, pendingStateSearcher, this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
-  while (!states.empty() && !haltExecution) {
+  while (!states.empty() && !searcher->empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
     stepInstruction(state);

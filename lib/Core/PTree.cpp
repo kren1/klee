@@ -16,16 +16,25 @@
 
 using namespace klee;
 
-//Root node belongs to all sets, so all 3 bits are set.
-PTree::PTree(const data_type &root) : root(PTreeNodePtr(new Node(nullptr, root),7 )) {}
+PTree::PTree(const data_type &_root) : root(PTreeNodePtr(new Node(nullptr, _root),0 )) {
+    
+    _root->ptreeNode = root.getPointer();
+}
 
 std::pair<PTreeNode*, PTreeNode*>
 PTree::split(Node *n, 
              const data_type &leftData, 
              const data_type &rightData) {
+  auto node = n;
   assert(n && !n->left.getPointer() && !n->right.getPointer());
+  assert(n == rightData->ptreeNode && "Split expect current to be right");
+  uint8_t currentNodeTag = root.getInt();
+  if (node->parent)
+       currentNodeTag = node->parent->left.getPointer() == node
+                                ? node->parent->left.getInt()
+                                : node->parent->right.getInt();
   n->left = PTreeNodePtr(new Node(n, leftData));
-  n->right = PTreeNodePtr(new Node(n, rightData));
+  n->right = PTreeNodePtr(new Node(n, rightData), currentNodeTag);
   assert(n->left.getPointer() != n);
   assert(n->right.getPointer() != n);
   return std::make_pair(n->left.getPointer(), n->right.getPointer());
@@ -58,7 +67,7 @@ void PTree::remove(Node *n) {
     if (!parent) {
       // We're at the root.
       root = child;
-      root.setInt(7);
+  //    root.setInt(7);
     } else {
       if (n == parent->left.getPointer()) {
         parent->left = child;

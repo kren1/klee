@@ -319,63 +319,48 @@ void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {
+  size = size + addedStates.size() - removedStates.size();
+  for (auto es : addedStates) {
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+    PTreeNodePtr *childPtr;
 
-    size = size + addedStates.size() - removedStates.size();
-    if(current != nullptr) {
-      PTreeNode *pnode = current->ptreeNode, *parent = pnode->parent;
-      if(pnode != executor.processTree->root.getPointer()) { //handle root note
-      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-      while(!IS_OUR_NODE_VALID(*childPtr))
-      {
-        childPtr->setInt(childPtr->getInt() | idBitMask);
-        pnode = parent;
+    childPtr = parent ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                              : &parent->right)
+                      : &executor.processTree->root;
+    while (pnode && !IS_OUR_NODE_VALID(*childPtr)) {
+      childPtr->setInt(childPtr->getInt() | idBitMask);
+      pnode = parent;
+      if (pnode)
         parent = pnode->parent;
-        if(parent)
-          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-        else break;
-      } 
-      }
-    }
 
-    for(auto es : addedStates) {
-      PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
-      if(pnode == executor.processTree->root.getPointer()) continue; //handle root note
-      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-      do {
-        assert(!IS_OUR_NODE_VALID(*childPtr) && "Claiming PTree child already ours");
-        childPtr->setInt(childPtr->getInt() | idBitMask);
-        pnode = parent;
+      childPtr = parent
+                     ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                             : &parent->right)
+                     : &executor.processTree->root;
+    }
+  }
+
+	for (auto es : removedStates) {
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+
+    while (pnode && !IS_OUR_NODE_VALID(pnode->left) &&
+           !IS_OUR_NODE_VALID(pnode->right)) {
+      auto childPtr =
+          parent ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                         : &parent->right)
+                 : &executor.processTree->root;
+      assert(IS_OUR_NODE_VALID(*childPtr) && "Removing pTree child not ours");
+      childPtr->setInt(childPtr->getInt() & ~idBitMask);
+      pnode = parent;
+      if (pnode)
         parent = pnode->parent;
-        if(parent)
-          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-        else break;
-      } while(!IS_OUR_NODE_VALID(*childPtr));
     }
-
-    for(auto es : removedStates) {
-      PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
-      if(pnode == executor.processTree->root.getPointer()) { //handle root
-          size++;
-          continue;
-      }
-      auto childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-      
-      do {
-        assert(IS_OUR_NODE_VALID(*childPtr) && "Removing pTree child not ours");
-        childPtr->setInt(childPtr->getInt() &  ~idBitMask);
-        pnode = parent;
-        parent = pnode->parent;
-        if(parent)
-          childPtr = (parent->left.getPointer() == pnode) ? &parent->left : &parent->right;
-        else break;
-      } while(!IS_OUR_NODE_VALID(pnode->left) && !IS_OUR_NODE_VALID(pnode->right));
-
-    }
+  }  
 
 }
 
-bool RandomPathSearcher::empty() { 
-  return size == 0; 
+bool RandomPathSearcher::empty() {  
+	return !IS_OUR_NODE_VALID(executor.processTree->root);
 }
 
 ///
@@ -470,12 +455,13 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     return baseNormalSearcher->selectForDelition(size);
 }
 
-ExecutionState &PendingSearcher::selectState() {
+bool PendingSearcher::empty() { 
+  if(!baseNormalSearcher->empty()) return false;
 
   bool solverResult = false, status = false;
   exec->solver->setTimeout(maxReviveTime);
   while(baseNormalSearcher->empty()) {
-      assert(!basePendingSearcher->empty() && "Both pending and normal searcher ran out of states");
+      if(basePendingSearcher->empty()) return true;
 //      llvm::errs() << "Reviving pending state: ";
       auto& es = basePendingSearcher->selectState();
       assert(!es.pendingConstraint.isNull());
@@ -500,7 +486,10 @@ ExecutionState &PendingSearcher::selectState() {
   }
   exec->solver->setTimeout(time::Span());
 
+  return baseNormalSearcher->empty() && basePendingSearcher->empty(); 
+}
 
+ExecutionState &PendingSearcher::selectState() {
   return baseNormalSearcher->selectState();
 }
 
