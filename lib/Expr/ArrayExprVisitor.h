@@ -125,18 +125,18 @@ public:
       : ExprVisitor(recursive), optimized(_optimized) {}
 };
 
+
+//Checks if top level expression is a multiplication and removes it
 class IndexCleanerVisitor : public ExprVisitor {
 private:
-  bool mul{true};
-  ref<Expr> index;
+  bool first{true};
 
 protected:
   Action visitMul(const MulExpr &) override;
-  Action visitRead(const ReadExpr &) override;
+  Action visitExpr(const Expr &) override;
 
 public:
-  IndexCleanerVisitor() : ExprVisitor(true) {}
-  inline ref<Expr> getIndex() { return index; }
+  IndexCleanerVisitor() : ExprVisitor(false) {}
 };
 } // namespace klee
 

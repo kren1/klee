@@ -307,10 +307,19 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
 
       ref<Expr> index = read->index;
       IndexCleanerVisitor ice;
-      ice.visit(index);
-      if (ice.getIndex().get()) {
-        index = ice.getIndex();
-      }
+      index = ice.visit(index);
+     // index->dump();
+////      llvm::errs() << read->updates.root->getName() << ": ";
+//      llvm::errs() << "width: " << width << "\n";
+//         const Array* A = read->updates.root;
+//       llvm::errs() << A->getName() << ": [";
+//        for (unsigned i = 0, e = A->size; i != e; ++i) {
+//          if (i)
+//            llvm::errs() << " ";
+//          llvm::errs() << A->constantValues[i];
+//        }
+//        llvm::errs() << "]\n";
+
 
       ref<Expr> opt =
           buildConstantSelectExpr(index, arrayValues, width, elementsInArray);
@@ -636,10 +645,7 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
 
     ref<Expr> new_index = re->index;
     IndexCleanerVisitor ice;
-    ice.visit(new_index);
-    if (ice.getIndex().get()) {
-      new_index = ice.getIndex();
-    }
+    new_index = ice.visit(new_index);
 
     int new_index_width = new_index->getWidth();
     // Iterate through all the ranges

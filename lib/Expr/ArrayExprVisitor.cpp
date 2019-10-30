@@ -258,17 +258,33 @@ ExprVisitor::Action ArrayValueOptReplaceVisitor::visitRead(const ReadExpr &re) {
 }
 
 ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
-  if (mul) {
-    if (!isa<ConstantExpr>(e.getKid(0)))
-      index = e.getKid(0);
-    else if (!isa<ConstantExpr>(e.getKid(1)))
-      index = e.getKid(1);
-    mul = false;
+  if (first) {
+    first = false;
+    ref<Expr> index;
+    if (!isa<ConstantExpr>(e.getKid(0))) {
+       if(isa<ConstantExpr>(e.getKid(1)))
+          index = e.getKid(0);
+        else return Action::doChildren();
+    }
+    else if (!isa<ConstantExpr>(e.getKid(1))) {
+       if(isa<ConstantExpr>(e.getKid(0)))
+          index = e.getKid(1);
+       else return Action::doChildren();
+    }
+    return Action::changeTo(index);
+  } else {
+    return Action::doChildren();
   }
-  return Action::doChildren();
 }
 
-ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &) {
-  mul = false;
-  return Action::doChildren();
+ExprVisitor::Action IndexCleanerVisitor::visitExpr(const Expr &e) {
+  switch(e.getKind()) {
+    case Expr::Extract: 
+    case Expr::ZExt: 
+    case Expr::SExt: 
+    case Expr::Mul: 
+        return Action::doChildren();
+    default:
+        return Action::skipChildren();
+  }
 }
