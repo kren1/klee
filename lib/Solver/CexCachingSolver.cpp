@@ -200,13 +200,14 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
            ie = assignmentsTable.end(); it != ie; ++it) {
       Assignment *a = *it;
- //     a->dump();
+//      a->dump();
       if (a->satisfies(key.begin(), key.end())) {
-//        llvm::errs() << "Success!\n";
+ //       llvm::errs() << "Success!\n";
         result = a;
         return true;
       }
     }
+//    llvm::errs() << "Fail!\n";
     if(CexClear > 0 && assignmentsTable.size() > CexClear) {
       llvm::errs() << "Clearing cex!\n";
 

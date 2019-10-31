@@ -83,6 +83,7 @@ void PTree::remove(Node *n) {
 
 void PTree::dump(llvm::raw_ostream &os) {
   ExprPPrinter *pp = ExprPPrinter::create(os);
+  os << root.getPointer() << ":" << (int)root.getInt() << "\n";
   pp->setNewline("\\l");
   os << "digraph G {\n";
   os << "\tsize=\"10,7.5\";\n";

@@ -524,9 +524,15 @@ PendingSearcher::update(ExecutionState *current,
 //      current = nullptr;
 //      errs() << "Current nulled\n";
   }
-  
   baseNormalSearcher->update(current, addedN, removedN);
   basePendingSearcher->update(nullptr, addedP, removedP);
+  if(addedStates.size() > 0 || removedStates.size() > 0) {
+  llvm::errs() << "=Normal: " ;
+  baseNormalSearcher->printName(errs());
+  llvm::errs() << " Pending: " ;
+  basePendingSearcher->printName(errs());
+  llvm::errs() << "\n" ;
+  }
 }
 
 

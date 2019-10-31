@@ -977,13 +977,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           if( status && solverResult ) {  
             addConstraint(current, condition);
             res = Solver::True;        
-//            errs() << ("skip CEX cache HIT on true!\n") ;
+            errs() << ("skip CEX cache HIT on true!\n") ;
           } else {
             status = fastSolver->mayBeTrue(Query(current.constraints, Expr::createIsZero(condition)), solverResult);
             if( status && solverResult) {
               addConstraint(current, Expr::createIsZero(condition));
               res = Solver::False;
- //             errs() << ("skip CEX cache HIT on false!\n") ;
+              errs() << ("skip CEX cache HIT on false!\n") ;
             } else {
                 klee_warning("Both branches don't have a CEX hit when skipping fork");
     current.pc = current.prevPC;
@@ -1728,6 +1728,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     const auto bi = cast<IndirectBrInst>(i);
     auto address = eval(ki, 0, state).value;
     address = toUnique(state, address);
+    klee_warning("Indirect branch");
 
     // concrete address
     if (const auto CE = dyn_cast<ConstantExpr>(address.get())) {
@@ -2747,7 +2748,7 @@ void Executor::updateStates(ExecutionState *current) {
       Query qr(current->constraints, current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status && solverResult ) {  
-          errs() << ("current CEX cache HIT!\n") ;
+//          errs() << ("current CEX cache HIT!\n") ;
           addConstraint(*current, current->pendingConstraint);
           current->pendingConstraint = nullptr;
       }
@@ -2758,7 +2759,7 @@ void Executor::updateStates(ExecutionState *current) {
           Query qr(current->constraints, current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
           if(status && solverResult) {
-              errs() << ("added CEX cache HIT!\n");
+ //             errs() << ("added CEX cache HIT!\n");
               addConstraint(*current, current->pendingConstraint);
               current->pendingConstraint = nullptr;
           }
@@ -3696,6 +3697,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
+    klee_warning("multiple resolution!");
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
     
     StatePair branches = fork(*unbound, inBounds, true);
