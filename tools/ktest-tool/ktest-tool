@@ -95,6 +95,8 @@ class KTest:
 
         # print objects
         for i, (name, data) in enumerate(self.objects):
+            if name.endswith("-stat"):
+                continue
             def p(key, arg): print(fmt[key].format(i, arg), file=sio)
 
             blob = data.rstrip(b'\x00') if format_spec.endswith('trimzeros') else data
