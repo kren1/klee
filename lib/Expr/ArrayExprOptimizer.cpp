@@ -14,6 +14,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/Assignment.h"
+#include "klee/Expr/ArrayRanges.h"
 #include "klee/Expr/ExprBuilder.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
@@ -27,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <set>
+#include <unordered_map>
 
 using namespace klee;
 
@@ -428,10 +430,10 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
 ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     const ref<Expr> &index, std::vector<uint64_t> &arrayValues,
     Expr::Width width, unsigned arraySize) const {
-  std::vector<std::pair<uint64_t, uint64_t>> ranges;
-  std::vector<uint64_t> values;
+//        llvm::errs() << "Constant select expr\n";
   std::set<uint64_t> unique_array_values;
-  ExprBuilder *builder = createDefaultExprBuilder();
+  ExprBuilder *builder =createDefaultExprBuilder();
+  builder = createConstantFoldingExprBuilder(builder);
   Expr::Width valWidth = width;
   ref<Expr> result;
 
@@ -443,122 +445,139 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
   }
   Expr::Width idxWidth = actualIndex->getWidth();
 
-  // Calculate the repeating values ranges in the constant array
-  unsigned curr_idx = 0;
-  uint64_t curr_val = arrayValues[0];
-  for (unsigned i = 0; i < arraySize; i++) {
-    uint64_t temp = arrayValues[i];
-    unique_array_values.insert(curr_val);
-    if (temp != curr_val) {
-      ranges.emplace_back(curr_idx, i);
-      values.push_back(curr_val);
-      curr_val = temp;
-      curr_idx = i;
-      if (i == (arraySize - 1)) {
-        ranges.emplace_back(curr_idx, i + 1);
-        values.push_back(curr_val);
-      }
-    } else if (i == (arraySize - 1)) {
-      ranges.emplace_back(curr_idx, i + 1);
-      values.push_back(curr_val);
-    }
-  }
+  auto derivative = ArrayRanges::firstDerivative(arrayValues);
+  auto derivativeRanges = ArrayRanges::equalRanges(derivative);
+  auto ranges = ArrayRanges::equalRanges(arrayValues);
+ // llvm::errs() << "ranges: " << ranges << "\nderivatives[";
+ // for(const auto& d : derivative)
+ //     llvm::errs() << d << ", ";
+ // llvm::errs() << "]\n";
 
-  if (((double)unique_array_values.size() / (double)(arraySize)) >=
+  if (((double)ranges.size() / (double)(arraySize + 1)) >=
       ArrayValueRatio) {
     return result;
   }
 
-  std::map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> exprMap;
-  for (size_t i = 0; i < ranges.size(); i++) {
-    if (exprMap.find(values[i]) != exprMap.end()) {
-      exprMap[values[i]].emplace_back(ranges[i].first, ranges[i].second);
+  std::unordered_map<uint64_t, std::vector<ArrayRanges::Range>> exprMap;
+  for (const auto& range : ranges) {
+    auto value = arrayValues[range.start];
+    if (exprMap.count(value) > 0) {
+      exprMap[value].emplace_back(range);
     } else {
-      if (exprMap.find(values[i]) == exprMap.end()) {
-        exprMap.insert(std::make_pair(
-            values[i], std::vector<std::pair<uint64_t, uint64_t>>()));
-      }
-      exprMap.find(values[i])->second.emplace_back(ranges[i].first,
-                                                   ranges[i].second);
+      exprMap[value] = {range};
     }
+  }
+  for (const auto& valRange : exprMap) {
+  //    llvm::errs() << valRange.first << " -> " << valRange.second << "\n";
+  }
+
+ //   llvm::errs() << "derivative Ranges: " << derivativeRanges << "\n";
+  std::vector<std::pair<LinFun, ArrayRanges::Range>> derExprMap;
+  assert(derivativeRanges.size() > 1 && "TODO edge case");
+
+  auto rangeIt = derivativeRanges.begin();
+  assert(rangeIt->isUnitary() && "First value should always be a transition (ie. infinite derivative)"); 
+  auto arrayVal = arrayValues[rangeIt->start];
+
+  auto fun = LinFun(arrayVal,1, rangeIt->start);
+  assert(fun.eval(rangeIt->start) == arrayVal);
+  derExprMap.emplace_back(fun, *rangeIt);
+  rangeIt++;
+//  llvm::errs() << derExprMap.back().second << " -> " << derExprMap.back().first << "\n";
+
+
+  while(rangeIt != derivativeRanges.end()) {
+    arrayVal = arrayValues[rangeIt->start];
+    if(
+        //(derivative[rangeIt->start] != derivative[derExprMap.back().second.start])
+       (derExprMap.back().second.isUnitary() && !rangeIt->isUnitary())) { //linear case
+      auto& record = derExprMap.back();
+      record.first.coef = derivative[rangeIt->start];
+      assert(record.second.merge(*rangeIt));
+    } else { //transition case
+      fun = LinFun(arrayVal, 1, rangeIt->start);
+      derExprMap.emplace_back(fun, *rangeIt);
+    }
+//    llvm::errs() << derExprMap.back().second << " -> " << derExprMap.back().first << "\n";
+//    llvm::errs() << arrayVal << " x: " << rangeIt->start << "\n";
+    assert(derExprMap.back().first.eval(rangeIt->start) == arrayVal);
+    rangeIt++;
   }
 
   int ct = 0;
-  // For each range appropriately build the Select expression.
-  for (auto range : exprMap) {
-    ref<Expr> temp;
-    if (ct == 0) {
-      temp = builder->Constant(llvm::APInt(valWidth, range.first, false));
-    } else {
-      if (range.second.size() == 1) {
-        if (range.second[0].first == (range.second[0].second - 1)) {
-          temp = SelectExpr::create(
-              EqExpr::create(actualIndex,
-                             builder->Constant(llvm::APInt(
-                                 idxWidth, range.second[0].first, false))),
-              builder->Constant(llvm::APInt(valWidth, range.first, false)),
-              result);
+#define valAPInt(value) llvm::APInt(valWidth, (uint64_t)value, false)
+#define idxAPInt(value) llvm::APInt(idxWidth, (uint64_t)value, false)
+#define idxsAPInt(value) llvm::APInt(idxWidth, (int64_t)value, true)
+  auto createIdxForRange = [&](const ArrayRanges::Range& range) {
+        return range.isUnitary() 
+              ?
+                EqExpr::create(actualIndex,
+                             builder->Constant(idxAPInt(range.start)))
 
-        } else {
-          temp = SelectExpr::create(
-              AndExpr::create(
+              : AndExpr::create(
                   SgeExpr::create(actualIndex,
-                                  builder->Constant(llvm::APInt(
-                                      idxWidth, range.second[0].first, false))),
+                                  builder->Constant(idxAPInt(range.start))),
                   SltExpr::create(
                       actualIndex,
-                      builder->Constant(llvm::APInt(
-                          idxWidth, range.second[0].second, false)))),
-              builder->Constant(llvm::APInt(valWidth, range.first, false)),
-              result);
-        }
-
-      } else {
-        ref<Expr> currOr;
-        if (range.second[0].first == (range.second[0].second - 1)) {
-          currOr = EqExpr::create(actualIndex,
-                                  builder->Constant(llvm::APInt(
-                                      idxWidth, range.second[0].first, false)));
+                      builder->Constant(idxAPInt(range.end))));
+  };
+  auto linFunToExpr = [&](const LinFun& fun, const ref<Expr>& idx) {
+      ref<Expr> ret = builder->Sub(idx, builder->Constant(idxsAPInt(fun.x_offset)));
+      ret = builder->Mul(ret, builder->Constant(idxsAPInt(fun.coef)));
+      ret = builder->Add(ret, builder->Constant(idxsAPInt(fun.base)));
+      return ret;
+  };
+  if(derExprMap.size() < exprMap.size()) {
+      klee_warning("Using linear regions");
+      for (const auto& linFunRange : derExprMap) {
+        auto linFun = linFunRange.first;
+        auto range = linFunRange.second;
+  //      llvm::errs() << range<< " -> " << linFun << "\n";
+        ref<Expr> temp;
+        if (ct == 0) {
+          temp = linFunToExpr(linFun, actualIndex);
         } else {
-          currOr = AndExpr::create(
-              SgeExpr::create(actualIndex,
-                              builder->Constant(llvm::APInt(
-                                  idxWidth, range.second[0].first, false))),
-              SltExpr::create(actualIndex,
-                              builder->Constant(llvm::APInt(
-                                  idxWidth, range.second[0].second, false))));
+          temp = SelectExpr::create(createIdxForRange(range),
+                      linFunToExpr(linFun, actualIndex),
+                      result);
+          
         }
-        for (size_t i = 1; i < range.second.size(); i++) {
-          ref<Expr> tempOr;
-          if (range.second[i].first == (range.second[i].second - 1)) {
-            tempOr = OrExpr::create(
-                EqExpr::create(actualIndex,
-                               builder->Constant(llvm::APInt(
-                                   idxWidth, range.second[i].first, false))),
-                currOr);
+        result = temp;
+        ct++;
+      }
+  } else {
+      klee_warning("Using constant regions");
+      for (const auto& range : exprMap) {
+        auto value = range.first;
+        auto rangesForValue = range.second;
+        ref<Expr> temp;
+        if (ct == 0) {
+          temp = builder->Constant(valAPInt(value));
+        } else {
+          if (rangesForValue.size() == 1) {
+            temp = SelectExpr::create(createIdxForRange(rangesForValue[0]),
+                      builder->Constant(valAPInt(value)),
+                      result);
 
           } else {
-            tempOr = OrExpr::create(
-                AndExpr::create(
-                    SgeExpr::create(
-                        actualIndex,
-                        builder->Constant(llvm::APInt(
-                            idxWidth, range.second[i].first, false))),
-                    SltExpr::create(
-                        actualIndex,
-                        builder->Constant(llvm::APInt(
-                            idxWidth, range.second[i].second, false)))),
-                currOr);
+            ref<Expr> currOr;
+            currOr = createIdxForRange(rangesForValue[0]);
+
+            for (size_t i = 1; i < rangesForValue.size(); i++) {
+              ref<Expr> tempOr;
+              tempOr = OrExpr::create( 
+                createIdxForRange(rangesForValue[i]),
+                currOr
+              );
+              currOr = tempOr;
+            }
+            temp = SelectExpr::create(currOr, builder->Constant(valAPInt(value)),
+                                      result);
           }
-          currOr = tempOr;
         }
-        temp = SelectExpr::create(currOr, builder->Constant(llvm::APInt(
-                                              valWidth, range.first, false)),
-                                  result);
+        result = temp;
+        ct++;
       }
-    }
-    result = temp;
-    ct++;
   }
 
   delete (builder);
