@@ -1,4 +1,5 @@
-; LLVM 5 added nullunknown parameter to @llvm.objectsize
+; REQUIRES: lt-llvm-9.0
+; LLVM 5 added parameter "nullunknown" to @llvm.objectsize
 ; REQUIRES: geq-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
@@ -24,7 +25,7 @@ continue.block:
 continue.block2:
 ; allocate one byte
   %b = alloca i8, align 8
-  %4 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false, i1 false, i1 false)
+  %4 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false, i1 false)
   %cmp2 = icmp ne i64 %4, 1
   br i1 %cmp2, label %abort.block, label %exit.block
 
