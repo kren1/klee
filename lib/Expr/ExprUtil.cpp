@@ -122,7 +122,7 @@ ConstantArrayFinderT::visitRead(const ReadExpr &re) {
   const UpdateList &ul = re.updates;
 
   // FIXME should we memo better than what ExprVisitor is doing for us?
-  for (const UpdateNode *un = ul.head; un; un = un->next) {
+  for (auto un = ul.head; !un.isNull(); un = un->next) {
     visit(un->index);
     visit(un->value);
   }

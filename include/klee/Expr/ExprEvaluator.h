@@ -47,7 +47,7 @@ namespace klee {
 
   protected:
     ActionT evalRead(const UpdateList &ul, unsigned index) {
-      for (auto un = ul.head; un.isNull(); un = un->next) {
+      for (auto un = ul.head; !un.isNull(); un = un->next) {
         ref<Expr> ui = derived().visit(un->index);
 
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ui)) {
