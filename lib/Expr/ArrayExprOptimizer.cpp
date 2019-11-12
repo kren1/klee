@@ -103,6 +103,8 @@ ref<Expr> extendRead(const UpdateList &ul, const ref<Expr> index,
   }
 }
 
+extern Assignment* selectSMT;
+
 ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
   // Nothing to optimise for constant expressions
   if (isa<ConstantExpr>(e))
@@ -174,11 +176,26 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
       cacheExprUnapplicable.insert(e);
       return e;
     }
+//    for(auto& re : reads) {
+//       const Array* A = re->updates.root;
+//       if(A->isSymbolicArray()) continue;
+//       llvm::errs() << A->getName() << ": [";
+//        for (unsigned i = 0, e = A->size; i != e; ++i) {
+//          if (i)
+//            llvm::errs() << " ";
+//          llvm::errs() << A->constantValues[i];
+//        }
+//        llvm::errs() << "]\n";
+//       
+//    }
 
     ref<Expr> selectOpt =
         getSelectOptExpr(e, reads, readInfo, are.containsSymbolic());
     if (selectOpt.get()) {
       klee_warning("OPT_V: successful");
+//      selectOpt->dump();
+//      llvm::errs() << "e:\n";
+ //     e->dump();
       result = selectOpt;
       cacheExprOptimized[e] = result;
     } else {
@@ -188,6 +205,43 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
   }
   if (result.isNull())
     return e;
+  AssignmentEvaluator v(*selectSMT);
+//  ConstantExpr* eEval = dyn_cast<ConstantExpr>(v.visit(e));
+  auto eEval = (v.visit(e));
+  auto resEval = v.visit(result);
+  auto eqEref = EqExpr::create(eEval, resEval);
+  if(auto eqE = dyn_cast<ConstantExpr>(eqEref)) {
+
+    if(eqE->isFalse()) {
+      klee_warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  llvm::errs() << "e:\n";
+                        //    Add       Mul       ZExt          Concat    Read
+//  auto readIdx = v.visit(e->getKid(1)->getKid(1)->getKid(0)->getKid(0)->getKid(0));
+  //                        Eq          Read
+  auto readIdx = v.visit(e->getKid(1)->getKid(0));
+
+  e->dump();
+  llvm::errs() << "readIdx:\n";
+  readIdx->dump();
+  eEval->dump();
+  llvm::errs() << "res:\n";
+                          //    Add       Mul       ZExt          Select    And         Sle 
+//  auto resReadIdx = v.visit(e->getKid(1)->getKid(1)->getKid(0)->getKid(0)->getKid(0)->getKid(1));
+    //                        Eq          Select    Eq    
+  //auto resReadIdx = v.visit(e->getKid(1)->getKid(0)->getKid(1));
+  result->dump(); 
+  //resReadIdx->dump();
+  resEval->dump();}
+  } else {
+      klee_warning("Not constant");
+      }
+//  if(cnt == 1)  {
+//      e->dump();
+//      llvm::errs() << "Result:\n";
+//      result->dump();
+//      return e;
+//  }
+
   return result;
 }
 
@@ -282,7 +336,15 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       assert(read->updates.root->isConstantArray() &&
              "Expected concrete array, found symbolic array");
       auto arrayConstValues = read->updates.root->constantValues;
-      for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+
+      std::vector<const UpdateNode*> us;
+      us.reserve(read->updates.getSize());
+      for (const UpdateNode *un = read->updates.head; un; un = un->next) 
+          us.push_back(un);
+
+      //for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+      for(auto it = us.rbegin(); it != us.rend(); it++) {
+        const UpdateNode* un = *it;
         auto ce = dyn_cast<ConstantExpr>(un->index);
         assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getZExtValue();
@@ -307,8 +369,10 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       }
 
       ref<Expr> index = read->index;
-      IndexCleanerVisitor ice;
-      index = ice.visit(index);
+     // index->dump();
+//      IndexCleanerVisitor ice;
+//      index = ice.visit(index);
+        index = UDivExpr::create(index, ConstantExpr::create(bytesPerElement, index->getWidth()));
      // index->dump();
 ////      llvm::errs() << read->updates.root->getName() << ": ";
 //      llvm::errs() << "width: " << width << "\n";
@@ -343,7 +407,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       auto info = readInfo[read];
       auto cached = cacheReadExprOptimized.find(const_cast<ReadExpr*>(read));
       if (cached != cacheReadExprOptimized.end()) {
-        optimized.insert(std::make_pair(const_cast<ReadExpr*>(read), (*cached).second));
+        optimized.insert(std::make_pair(info.first, (*cached).second));
         continue;
       }
       Expr::Width width = read->getWidth();
@@ -366,7 +430,14 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
           arrayConstValues.push_back(ConstantExpr::create(0, Expr::Int8));
         }
       }
-      for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+      std::vector<const UpdateNode*> us;
+      us.reserve(read->updates.getSize());
+      for (const UpdateNode *un = read->updates.head; un; un = un->next) 
+          us.push_back(un);
+
+      //for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+      for(auto it = us.rbegin(); it != us.rend(); it++) {
+        const UpdateNode* un = *it;
         auto ce = dyn_cast<ConstantExpr>(un->index);
         assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getLimitedValue();
@@ -415,10 +486,24 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
             buildMixedSelectExpr(read, arrayValues, width, elementsInArray);
         if (opt.get()) {
           cacheReadExprOptimized[const_cast<ReadExpr*>(read)] = opt;
-          optimized.insert(std::make_pair(const_cast<ReadExpr*>(read), opt));
+          optimized.insert(std::make_pair(info.first, opt));
         }
       }
     }
+    AssignmentEvaluator v(*selectSMT);
+//  ConstantExpr* eEval = dyn_cast<ConstantExpr>(v.visit(e));
+    if(isa<AddExpr>(e)) {
+        auto eKid = e->getKid(1);
+        auto eEval = (v.visit(eKid));
+        auto eqEref = EqExpr::create(eEval, ConstantExpr::create(412, e->getWidth()));
+        if(auto eqE = dyn_cast<ConstantExpr>(eqEref)) {
+            if(eqE->isTrue()) {
+                klee_warning("About to replace wrong");
+            }
+        }
+    }
+
+   
     ArrayValueOptReplaceVisitor replacer(optimized, false);
     toReturn = replacer.visit(e);
   }
@@ -429,7 +514,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
 ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     const ref<Expr> &index, std::vector<uint64_t> &arrayValues,
     Expr::Width width, unsigned arraySize) const {
-//        llvm::errs() << "Constant select expr\n";
+        llvm::errs() << "Constant select expr\n";
   std::set<uint64_t> unique_array_values;
   ExprBuilder *builder =createDefaultExprBuilder();
   builder = createConstantFoldingExprBuilder(builder);
@@ -497,9 +582,17 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
       fun = LinFun(arrayVal, 1, rangeIt->start);
       derExprMap.emplace_back(fun, *rangeIt);
     }
-//    llvm::errs() << derExprMap.back().second << " -> " << derExprMap.back().first << "\n";
-//    llvm::errs() << arrayVal << " x: " << rangeIt->start << "\n";
-    assert(derExprMap.back().first.eval(rangeIt->start) == arrayVal);
+    if(derExprMap.back().first.eval(rangeIt->start) != arrayVal) {
+        llvm::errs() << derExprMap.back().second << " -> " << derExprMap.back().first << "\n";
+        llvm::errs() << arrayVal << " x: " << rangeIt->start << "\n";
+        klee_warning("Failed linear function!");
+        //prevent use of linear regions
+        for(int i = 0; i < exprMap.size(); i++) {
+            derExprMap.emplace_back(LinFun(i*2, i*45345, i), *rangeIt);
+        }
+        break;
+    }
+//    assert(derExprMap.back().first.eval(rangeIt->start) == arrayVal);
     rangeIt++;
   }
 
@@ -587,6 +680,7 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
 ref<Expr> ExprOptimizer::buildMixedSelectExpr(
     const ReadExpr *re, std::vector<std::pair<uint64_t, bool>> &arrayValues,
     Expr::Width width, unsigned elementsInArray) const {
+        llvm::errs() << "Mixed select expr\n";
   ExprBuilder *builder = createDefaultExprBuilder();
   std::vector<uint64_t> values;
   std::vector<std::pair<uint64_t, uint64_t>> ranges;
@@ -654,7 +748,9 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
             ConstantExpr::create(holes[i], re->index->getWidth()),
             ConstantExpr::create(width / 8, re->index->getWidth()));
         ref<Expr> cond = EqExpr::create(
-            re->index, ConstantExpr::create(holes[i], re->index->getWidth()));
+            re->index, temp_idx);
+        //ref<Expr> cond = EqExpr::create(
+        //    re->index, ConstantExpr::create(holes[i], re->index->getWidth()));
         ref<Expr> temp = SelectExpr::create(
             cond, extendRead(re->updates, temp_idx, width), result);
         result = temp;
@@ -671,16 +767,16 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
       ref<Expr> temp;
       if (ranges[i].second - 1 == ranges[i].first) {
         ref<Expr> cond = EqExpr::create(
-            new_index, ConstantExpr::create(ranges[i].first, new_index_width));
+            new_index, ConstantExpr::create(ranges[i].first * width / 8, new_index_width));
         ref<Expr> t = ConstantExpr::create(values[i], width);
         ref<Expr> f = result;
         temp = SelectExpr::create(cond, t, f);
       } else {
         // Create the select constraint
         ref<Expr> cond = AndExpr::create(
-            SgeExpr::create(new_index, ConstantExpr::create(ranges[i].first,
+            SgeExpr::create(new_index, ConstantExpr::create(ranges[i].first * width / 8,
                                                             new_index_width)),
-            SltExpr::create(new_index, ConstantExpr::create(ranges[i].second,
+            SltExpr::create(new_index, ConstantExpr::create(ranges[i].second * width / 8,
                                                             new_index_width)));
         ref<Expr> t = ConstantExpr::create(values[i], width);
         ref<Expr> f = result;

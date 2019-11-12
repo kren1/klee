@@ -40,6 +40,7 @@ public:
   /// @param valueOnly XXX document
   /// @return optimised expression
   ref<Expr> optimizeExpr(const ref<Expr> &e, bool valueOnly);
+  ExprOptimizer() = default;
 
 private:
   bool computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,

@@ -1239,10 +1239,18 @@ Executor::toConstant(ExecutionState &state,
      << " to value " << value << " (" << (*(state.pc)).info->file << ":"
      << (*(state.pc)).info->line << ")";
 
-  if (AllExternalWarnings)
+  if (true || AllExternalWarnings)
     klee_warning("%s", os.str().c_str());
   else
     klee_warning_once(reason, "%s", os.str().c_str());
+
+  bool result = false;
+  if(reason[0] == 'm')
+    success = solver->mayBeTrue(state, NeExpr::create(e, value), result);
+
+  if(result) {
+      klee_warning("None unique to constant");
+  }
 
   addConstraint(state, EqExpr::create(e, value));
     
@@ -2006,7 +2014,35 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true);
-        if (res.first) {
+
+
+         bool status = false, solverResult = false;
+         if(res.first && !res.first->pendingConstraint.isNull()) {
+         ref<Expr> expr = res.first->pendingConstraint;
+         res.first->pendingConstraint = nullptr;
+         status = solver->mayBeTrue(*res.first, expr, solverResult);
+         if(status && solverResult) {
+          addConstraint(*res.first, expr);
+         } else {
+             terminateState(*res.first);
+             res.first = nullptr;
+         }
+         } 
+         
+         if(res.second && !res.second->pendingConstraint.isNull()) {
+         ref<Expr> expr = res.second->pendingConstraint;
+         res.second->pendingConstraint = nullptr;
+         status = false, solverResult = false;
+         status = solver->mayBeTrue(*res.second, expr, solverResult);
+         if(status && solverResult) {
+          addConstraint(*res.second, expr);
+         } else {
+             terminateState(*res.second);
+             res.second = nullptr;
+         }
+         }
+
+         if (res.first) {
           uint64_t addr = value->getZExtValue();
           if (legalFunctions.count(addr)) {
             f = (Function*) addr;
@@ -3650,7 +3686,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
     bool inBounds;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state, check, inBounds);
+  //  bool success = solver->mustBeTrue(state, check, inBounds);
+    inBounds = true;
+    bool success = true;
     solver->setTimeout(time::Span());
     if (!success) {
       state.pc = state.prevPC;

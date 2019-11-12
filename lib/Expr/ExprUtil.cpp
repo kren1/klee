@@ -13,6 +13,9 @@
 #include "klee/Expr/ExprVisitor.h"
 
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
+#include <deque>
 
 using namespace klee;
 
@@ -20,12 +23,18 @@ void klee::findReads(ref<Expr> e,
                      bool visitUpdates,
                      std::vector< ref<ReadExpr> > &results) {
   // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited 
-  std::vector< ref<Expr> > stack;
+  static std::unordered_map<Expr*, std::vector<ref<ReadExpr>>> cache;
+  auto it = cache.find(e.get());
+  if(it != cache.end()) {
+      results = it->second;
+      return;
+  }
+  std::deque< ref<Expr> > stack;
   ExprHashSet visited;
-  std::set<const UpdateNode *> updates;
+  std::unordered_set<const UpdateNode *> updates;
   
   if (!isa<ConstantExpr>(e)) {
-    visited.insert(e);
+    visited.insert(e.get());
     stack.push_back(e);
   }
 
@@ -39,7 +48,7 @@ void klee::findReads(ref<Expr> e,
       results.push_back(re);
 
       if (!isa<ConstantExpr>(re->index) &&
-          visited.insert(re->index).second)
+          visited.insert(re->index.get()).second)
         stack.push_back(re->index);
       
       if (visitUpdates) {
@@ -52,10 +61,10 @@ void klee::findReads(ref<Expr> e,
         if (updates.insert(re->updates.head).second) {
           for (const UpdateNode *un=re->updates.head; un; un=un->next) {
             if (!isa<ConstantExpr>(un->index) &&
-                visited.insert(un->index).second)
+                visited.insert(un->index.get()).second)
               stack.push_back(un->index);
             if (!isa<ConstantExpr>(un->value) &&
-                visited.insert(un->value).second)
+                visited.insert(un->value.get()).second)
               stack.push_back(un->value);
           }
         }
@@ -65,10 +74,14 @@ void klee::findReads(ref<Expr> e,
       for (unsigned i=0; i<e->getNumKids(); i++) {
         ref<Expr> k = e->getKid(i);
         if (!isa<ConstantExpr>(k) &&
-            visited.insert(k).second)
+            visited.insert(k.get()).second)
           stack.push_back(k);
       }
     }
+  if(cache.size() > 1024) {
+      cache.clear();
+  }
+  cache[e.get()] = results;
   }
 }
 

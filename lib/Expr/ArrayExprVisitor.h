@@ -134,6 +134,7 @@ private:
 
 protected:
   Action visitMul(const MulExpr &) override;
+  Action visitAdd(const AddExpr &) override;
   Action visitExpr(const Expr &) override;
 
 public:

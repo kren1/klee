@@ -110,7 +110,7 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createGlobalDCEPass());            // Remove unused fns and globs
   addPass(PM, createIPConstantPropagationPass());// IP Constant Propagation
   addPass(PM, createDeadArgEliminationPass());   // Dead argument elimination
-  addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
+//  addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
 
   addPass(PM, createPruneEHPass());              // Remove dead EH info
@@ -125,7 +125,7 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
     addPass(PM, createFunctionInliningPass());   // Inline small functions
   addPass(PM, createArgumentPromotionPass());    // Scalarize uninlined fn args
 
-  addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
+//  addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
@@ -133,7 +133,7 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
 #else
   addPass(PM, createScalarReplAggregatesPass()); // Break up aggregate allocas
 #endif
-  addPass(PM, createInstructionCombiningPass()); // Combine silly seq's
+//  addPass(PM, createInstructionCombiningPass()); // Combine silly seq's
 
   addPass(PM, createTailCallEliminationPass());  // Eliminate tail calls
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
@@ -142,18 +142,18 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createLICMPass());                 // Hoist loop invariants
   addPass(PM, createLoopUnswitchPass());         // Unswitch loops.
   // FIXME : Removing instcombine causes nestedloop regression.
-  addPass(PM, createInstructionCombiningPass());
+//  addPass(PM, createInstructionCombiningPass());
   addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
   addPass(PM, createLoopDeletionPass());         // Delete dead loops
   addPass(PM, createLoopUnrollPass());           // Unroll small loops
-  addPass(PM, createInstructionCombiningPass()); // Clean up after the unroller
+//  addPass(PM, createInstructionCombiningPass()); // Clean up after the unroller
   addPass(PM, createGVNPass());                  // Remove redundancies
   addPass(PM, createMemCpyOptPass());            // Remove memcpy / form memset
   addPass(PM, createSCCPPass());                 // Constant prop with SCCP
 
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
-  addPass(PM, createInstructionCombiningPass());
+//  addPass(PM, createInstructionCombiningPass());
 
   addPass(PM, createDeadStoreEliminationPass()); // Delete dead stores
   addPass(PM, createAggressiveDCEPass());        // Delete dead instructions
@@ -221,7 +221,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   // simplification opportunities, and both can propagate functions through
   // function pointers.  When this happens, we often have to resolve varargs
   // calls, etc, so let instcombine do this.
-  addPass(Passes, createInstructionCombiningPass());
+//  addPass(Passes, createInstructionCombiningPass());
 
   if (!DisableInline)
     addPass(Passes, createFunctionInliningPass()); // Inline small functions
@@ -235,7 +235,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   addPass(Passes, createArgumentPromotionPass());
 
   // The IPO passes may leave cruft around.  Clean up after them.
-  addPass(Passes, createInstructionCombiningPass());
+//  addPass(Passes, createInstructionCombiningPass());
   addPass(Passes, createJumpThreadingPass()); // Thread jumps.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
   addPass(Passes, createSROAPass()); // Break up allocas
@@ -258,7 +258,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   addPass(Passes, createDeadStoreEliminationPass()); // Nuke dead stores
 
   // Cleanup and simplify the code after the scalar optimizations.
-  addPass(Passes, createInstructionCombiningPass());
+//  addPass(Passes, createInstructionCombiningPass());
 
   addPass(Passes, createJumpThreadingPass());           // Thread jumps.
   addPass(Passes, createPromoteMemoryToRegisterPass()); // Cleanup jumpthread.
@@ -276,7 +276,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
     addPass(Passes, createStripSymbolsPass(StripDebug && !Strip));
 
   // The user's passes may leave cruft around; clean up after them.
-  addPass(Passes, createInstructionCombiningPass());
+//  addPass(Passes, createInstructionCombiningPass());
   addPass(Passes, createCFGSimplificationPass());
   addPass(Passes, createAggressiveDCEPass());
   addPass(Passes, createGlobalDCEPass());

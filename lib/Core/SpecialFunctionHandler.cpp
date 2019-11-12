@@ -79,6 +79,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("klee_report_error", handleReportError),
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
+  add("memset", handleMemset, false),
   add("klee_assume", handleAssume, false),
   add("klee_check_memory_access", handleCheckMemoryAccess, false),
   add("klee_get_valuef", handleGetValue, true),
@@ -706,6 +707,62 @@ void SpecialFunctionHandler::handleFree(ExecutionState &state,
   assert(arguments.size()==1 &&
          "invalid number of arguments to free");
   executor.executeFree(state, arguments[0]);
+}
+
+void SpecialFunctionHandler::handleMemset(ExecutionState &state,
+                          KInstruction *target,
+                          std::vector<ref<Expr> > &arguments) {
+  // XXX should type check args
+  assert(arguments.size()==3 &&
+         "invalid number of arguments to memset");
+  state.dumpStack(llvm::errs());
+  auto address = arguments[0];
+  auto charToWrite = arguments[1];
+  if(charToWrite->getWidth() != Expr::Int8) {
+      charToWrite = ExtractExpr::create(charToWrite, 0, Expr::Int8);
+  }
+  auto size = executor.toConstant(state, arguments[2], "memset size");
+
+  // fast path: single in-bounds resolution
+  ObjectPair op;
+  bool success;
+  executor.solver->setTimeout(executor.coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, executor.solver, address, op, success)) {
+    assert(false && "Memset resolveOneFailed");
+//    address = toConstant(state, address, "resolveOne failure");
+//    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+  }
+  executor.solver->setTimeout(time::Span());
+
+  if (success) {
+    const MemoryObject *mo = op.first;
+   
+    ref<Expr> offset = mo->getOffsetExpr(address);
+    ref<Expr> check = mo->getBoundsCheckOffset(offset, size->getZExtValue());
+    assert(size->getZExtValue() <= mo->size && "Memset buffer overflow");
+
+    bool inBounds;
+    executor.solver->setTimeout(executor.coreSolverTimeout);
+  //  bool success = solver->mustBeTrue(state, check, inBounds);
+    inBounds = true;
+    bool success = true;
+    executor.solver->setTimeout(time::Span());
+    if (!success) {
+      state.pc = state.prevPC;
+      executor.terminateStateEarly(state, "Query timed out (bounds check).");
+      return;
+    }
+
+    if (inBounds) {
+      const ObjectState *os = op.second;
+      ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+      for(int i = 0; i < size->getZExtValue(); i++) {
+        wos->write(AddExpr::create(ConstantExpr::create(i, offset->getWidth()), offset), charToWrite);
+      }
+    }
+  } 
+
+ 
 }
 
 void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,

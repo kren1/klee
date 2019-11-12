@@ -149,6 +149,12 @@ void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
     assert(root->getRange() == value->getWidth());
   }
 
+  if(ConstantExpr* ce = dyn_cast<ConstantExpr>(value)) {
+      if(ce->getZExtValue() == 0xAB) {
+          llvm::errs() << "Unitilized mem write\n";
+      }
+  }
+
   if (head) --head->refCount;
   head = new UpdateNode(head, index, value);
   ++head->refCount;

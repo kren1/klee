@@ -276,6 +276,10 @@ ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
     return Action::doChildren();
   }
 }
+ExprVisitor::Action IndexCleanerVisitor::visitAdd(const AddExpr &e) {
+    return Action::skipChildren();
+
+}
 
 ExprVisitor::Action IndexCleanerVisitor::visitExpr(const Expr &e) {
   switch(e.getKind()) {
