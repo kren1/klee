@@ -2747,7 +2747,7 @@ void Executor::updateStates(ExecutionState *current) {
       Query qr(current->constraints, current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status && solverResult ) {  
-          errs() << ("current CEX cache HIT!\n") ;
+//          errs() << ("current CEX cache HIT!\n") ;
           addConstraint(*current, current->pendingConstraint);
           current->pendingConstraint = nullptr;
       }
@@ -2758,7 +2758,7 @@ void Executor::updateStates(ExecutionState *current) {
           Query qr(current->constraints, current->pendingConstraint);
           status = fastSolver->mayBeTrue(qr, solverResult);
           if(status && solverResult) {
-              errs() << ("added CEX cache HIT!\n");
+//              errs() << ("added CEX cache HIT!\n");
               addConstraint(*current, current->pendingConstraint);
               current->pendingConstraint = nullptr;
           }
