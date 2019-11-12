@@ -13,6 +13,7 @@
 #include "ExprHashMap.h"
 
 namespace klee {
+
   class ExprVisitor {
   protected:
     // typed variant, but non-virtual for efficiency

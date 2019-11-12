@@ -50,8 +50,8 @@ namespace klee {
     bool satisfies(InputIterator begin, InputIterator end);
     void dump();
   };
-  
-  class AssignmentEvaluator : public ExprEvaluator {
+
+  class AssignmentEvaluatorD : public ExprEvaluator {
     const Assignment &a;
 
   protected:
@@ -60,8 +60,23 @@ namespace klee {
     }
     
   public:
-    AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
+    AssignmentEvaluatorD(const Assignment &_a) : a(_a) {}
   };
+
+  class AssignmentEvaluatorT : public ExprEvaluatorT<AssignmentEvaluatorT> {
+    friend ExprEvaluatorT<AssignmentEvaluatorT>;
+    const Assignment &a;
+
+  protected:
+    ref<Expr> getInitialValue(const Array &mo, unsigned index) {
+      return a.evaluate(&mo, index);
+    }
+
+  public:
+    AssignmentEvaluatorT(const Assignment &_a) : a(_a) {}
+  };
+
+  using AssignmentEvaluator = AssignmentEvaluatorT;
 
   /***/
 

@@ -11,6 +11,7 @@
 #define KLEE_EXPRUTIL_H
 
 #include "klee/Expr/ExprVisitor.h"
+#include "klee/Expr/ExprVisitorT.h"
 
 #include <vector>
 
@@ -40,13 +41,25 @@ namespace klee {
                            InputIterator end,
                            std::vector<const Array*> &results);
 
-  class ConstantArrayFinder : public ExprVisitor {
+  class ConstantArrayFinderD : public ExprVisitor {
   protected:
     ExprVisitor::Action visitRead(const ReadExpr &re);
 
   public:
     std::set<const Array *> results;
   };
+
+  class ConstantArrayFinderT : public ExprVisitorT<ConstantArrayFinderT> {
+    friend ExprVisitorT<ConstantArrayFinderT>;
+    typedef typename ExprVisitorT<ConstantArrayFinderT>::ActionT ActionT;
+
+  protected:
+    ActionT visitRead(const ReadExpr &re);
+
+  public:
+    std::set<const Array *> results;
+  };
+  using ConstantArrayFinder = ConstantArrayFinderT;
 }
 
 #endif /* KLEE_EXPRUTIL_H */
