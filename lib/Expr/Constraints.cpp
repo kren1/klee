@@ -10,7 +10,7 @@
 #include "klee/Expr/Constraints.h"
 
 #include "klee/Expr/ExprPPrinter.h"
-#include "klee/Expr/ExprVisitor.h"
+#include "klee/Expr/ExprVisitorT.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/OptionCategories.h"
 
@@ -30,7 +30,9 @@ llvm::cl::opt<bool> RewriteEqualities(
     llvm::cl::cat(SolvingCat));
 }
 
-class ExprReplaceVisitor : public ExprVisitor {
+class ExprReplaceVisitor : public ExprVisitorT<ExprReplaceVisitor> {
+  typedef typename ExprVisitorT<ExprReplaceVisitor>::ActionT Action;
+
 private:
   ref<Expr> src, dst;
 
@@ -54,14 +56,15 @@ public:
   }
 };
 
-class ExprReplaceVisitor2 : public ExprVisitor {
+class ExprReplaceVisitor2 : public ExprVisitorT<ExprReplaceVisitor2> {
+  typedef typename ExprVisitorT<ExprReplaceVisitor2>::ActionT Action;
+
 private:
   const std::map< ref<Expr>, ref<Expr> > &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements) 
-    : ExprVisitor(true),
-      replacements(_replacements) {}
+  ExprReplaceVisitor2(const std::map<ref<Expr>, ref<Expr>> &_replacements)
+      : ExprVisitorT(true, true), replacements(_replacements) {}
 
   Action visitExprPost(const Expr &e) {
     std::map< ref<Expr>, ref<Expr> >::const_iterator it =
@@ -74,7 +77,7 @@ public:
   }
 };
 
-bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
+bool ConstraintManager::rewriteConstraints(ExprReplaceVisitor &visitor) {
   ConstraintManager::constraints_ty old;
   bool changed = false;
 

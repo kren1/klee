@@ -13,7 +13,7 @@
 
 #include "llvm/Support/CommandLine.h"
 
-namespace {
+namespace klee {
 llvm::cl::opt<bool> UseVisitorHash(
     "use-visitor-hash",
     llvm::cl::desc(
