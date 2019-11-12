@@ -75,7 +75,6 @@ void klee::findReads(ref<Expr> e,
 ///
 
 namespace klee {
-
 class SymbolicObjectFinder : public ExprVisitor {
 protected:
   Action visitRead(const ReadExpr &re) {
@@ -101,8 +100,7 @@ public:
   SymbolicObjectFinder(std::vector<const Array*> &_objects)
     : objects(_objects) {}
 };
-
-ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
+ExprVisitor::Action ConstantArrayFinderD::visitRead(const ReadExpr &re) {
   const UpdateList &ul = re.updates;
 
   // FIXME should we memo better than what ExprVisitor is doing for us?
@@ -116,6 +114,23 @@ ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
   }
 
   return Action::doChildren();
+}
+
+typename ExprVisitorT<ConstantArrayFinderT>::ActionT
+ConstantArrayFinderT::visitRead(const ReadExpr &re) {
+  const UpdateList &ul = re.updates;
+
+  // FIXME should we memo better than what ExprVisitor is doing for us?
+  for (const UpdateNode *un = ul.head; un; un = un->next) {
+    visit(un->index);
+    visit(un->value);
+  }
+
+  if (ul.root->isConstantArray()) {
+    results.insert(ul.root);
+  }
+
+  return ActionT::doChildren();
 }
 }
 

@@ -16,9 +16,9 @@
 // sets of constraints around, and to optimize constraints. We should
 // move the first usage into a separate data structure
 // (ConstraintSet?) which ConstraintManager could embed if it likes.
+class ExprReplaceVisitor;
 namespace klee {
 
-class ExprVisitor;
 
 class ConstraintManager {
 public:
@@ -62,7 +62,7 @@ public:
 private:
 
   // returns true iff the constraints were modified
-  bool rewriteConstraints(ExprVisitor &visitor);
+  bool rewriteConstraints(ExprReplaceVisitor &visitor);
 
   void addConstraintInternal(ref<Expr> e);
 };
