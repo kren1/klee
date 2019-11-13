@@ -504,7 +504,6 @@ void StatsTracker::writeStatsHeader() {
              << "MallocUsage ,"
              << "NumQueries ,"
              << "NumQueryConstructs ,"
-             << "NumObjects ,"
              << "WallTime ,"
              << "CoveredInstructions ,"
              << "UncoveredInstructions ,"
@@ -519,7 +518,6 @@ void StatsTracker::writeStatsHeader() {
 #endif
              << "QueryCexCacheHits "
              << ") VALUES ( "
-             << "?, "
              << "?, "
              << "?, "
              << "?, "
@@ -563,7 +561,6 @@ void StatsTracker::writeStatsLine() {
   sqlite3_bind_int64(insertStmt, 7, util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize());
   sqlite3_bind_int64(insertStmt, 8, stats::queries);
   sqlite3_bind_int64(insertStmt, 9, stats::queryConstructs);
-  sqlite3_bind_int64(insertStmt, 10, 0);  // was numObjects
   sqlite3_bind_int64(insertStmt, 11, elapsed().toMicroseconds());
   sqlite3_bind_int64(insertStmt, 12, stats::coveredInstructions);
   sqlite3_bind_int64(insertStmt, 13, stats::uncoveredInstructions);
