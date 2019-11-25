@@ -227,6 +227,48 @@ const UpdateList &ObjectState::getUpdates() const {
     for (; Begin != End; ++Begin)
       updates.extend(Writes[Begin].first, Writes[Begin].second);
   }
+  if(updates.getSize() > updates.root->size) {
+      int symbolicIndicies = 0;
+      int removed = 0;
+      std::vector<int> overwrites(updates.getSize(),0);
+      std::vector<const UpdateNode*> newUpdates;
+      newUpdates.reserve(updates.getSize());
+      llvm::errs() << updates.getSize() << " updates on size: " << updates.root->size << "!!!!!!!!!!\n";
+      for (const UpdateNode *un=updates.head; un; un=un->next) {
+          if(ConstantExpr* ce = dyn_cast<ConstantExpr>(un->index)) {
+              auto idx = ce->getZExtValue();
+              auto numOverwrites = overwrites[idx];
+              if(numOverwrites > 0) {
+                removed++;
+              } else {
+                  newUpdates.push_back(un);
+              }
+              overwrites[idx]++;
+          } else {
+              symbolicIndicies++;
+              newUpdates.push_back(un);
+          }
+      }
+      if(removed > 1) {
+      UpdateList uln(updates.root, nullptr);
+      for(auto it = newUpdates.rbegin(); it != newUpdates.rend(); it++) {
+          uln.extend( (*it)->index, (*it)->value);
+      }
+      updates = uln;
+      }
+      llvm::errs() << "\t symbolic writes: " << symbolicIndicies << "\n";
+      llvm::errs() << "\t removed : " << removed << "\n";
+      llvm::errs() << "\t overwrites [ ";
+      int idx = 0;
+      for(auto i : overwrites) {
+          if(i > 1) {
+              llvm::errs() << idx << "=" << i << " ,";
+          }
+          idx++;
+      }
+      llvm::errs() << "\b]\n";
+
+  }
 
   return updates;
 }

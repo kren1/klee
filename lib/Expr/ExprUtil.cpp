@@ -31,7 +31,7 @@ void klee::findReads(ref<Expr> e,
   }
   std::deque< ref<Expr> > stack;
   ExprHashSet visited;
-  std::unordered_set<const UpdateNode *> updates;
+  std::set<const UpdateNode *> updates;
   
   if (!isa<ConstantExpr>(e)) {
     visited.insert(e.get());
@@ -78,9 +78,9 @@ void klee::findReads(ref<Expr> e,
           stack.push_back(k);
       }
     }
-  if(cache.size() > 1024) {
-      cache.clear();
-  }
+//  if(cache.size() > 1024) {
+//      cache.clear();
+//  }
   cache[e.get()] = results;
   }
 }

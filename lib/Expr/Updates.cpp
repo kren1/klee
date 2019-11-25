@@ -151,7 +151,7 @@ void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
 
   if(ConstantExpr* ce = dyn_cast<ConstantExpr>(value)) {
       if(ce->getZExtValue() == 0xAB) {
-          llvm::errs() << "Unitilized mem write\n";
+//          llvm::errs() << "Unitilized mem write\n";
       }
   }
 

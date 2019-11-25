@@ -450,6 +450,7 @@ public:
 /// Class representing a byte update of an array.
 class UpdateNode {
   friend class UpdateList;  
+  friend class ObjectState;
 
   mutable unsigned refCount;
   // cache instead of recalc
@@ -474,8 +475,8 @@ public:
   unsigned hash() const { return hashValue; }
 
 private:
-  UpdateNode() : refCount(0) {}
   ~UpdateNode();
+  UpdateNode() : refCount(0) {}
 
   unsigned computeHash();
 };

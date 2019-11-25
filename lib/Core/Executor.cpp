@@ -1235,7 +1235,7 @@ Executor::toConstant(ExecutionState &state,
 
   std::string str;
   llvm::raw_string_ostream os(str);
-  os << "silently concretizing (reason: " << reason << ") expression " << e
+  os << "silently concretizing (reason: " << reason << ") expression " << "(redacted expr)"//e
      << " to value " << value << " (" << (*(state.pc)).info->file << ":"
      << (*(state.pc)).info->line << ")";
 
@@ -1245,12 +1245,12 @@ Executor::toConstant(ExecutionState &state,
     klee_warning_once(reason, "%s", os.str().c_str());
 
   bool result = false;
-  if(reason[0] == 'm')
-    success = solver->mayBeTrue(state, NeExpr::create(e, value), result);
-
-  if(result) {
-      klee_warning("None unique to constant");
-  }
+//  if(reason[0] == 'm')
+//    success = solver->mayBeTrue(state, NeExpr::create(e, value), result);
+//
+//  if(result) {
+//      klee_warning("None unique to constant");
+//  }
 
   addConstraint(state, EqExpr::create(e, value));
     
