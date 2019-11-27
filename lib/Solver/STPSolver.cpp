@@ -102,6 +102,7 @@ STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
   // the pointers using vc_DeleteExpr.  By setting EXPRDELETE to 0
   // we restore the old behaviour.
   vc_setInterfaceFlags(vc, EXPRDELETE, 0);
+  vc_setInterfaceFlags(vc, CMS4, 1);
 
   make_division_total(vc);
 

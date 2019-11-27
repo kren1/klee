@@ -97,8 +97,11 @@ protected:
 
     // XXX should we memo better than what ExprVisitor is doing for us?
     for (const UpdateNode *un=ul.head; un; un=un->next) {
-      visit(un->index);
-      visit(un->value);
+        if(seenUn.count(un) == 0) {
+          visit(un->index);
+          visit(un->value);
+          seenUn.insert(un);
+        }
     }
 
     if (ul.root->isSymbolicArray())
@@ -110,6 +113,7 @@ protected:
 
 public:
   std::set<const Array*> results;
+  std::unordered_set<const UpdateNode*> seenUn;
   std::vector<const Array*> &objects;
   
   SymbolicObjectFinder(std::vector<const Array*> &_objects)
@@ -120,8 +124,8 @@ ExprVisitor::Action ConstantArrayFinderD::visitRead(const ReadExpr &re) {
 
   // FIXME should we memo better than what ExprVisitor is doing for us?
   for (const UpdateNode *un = ul.head; un; un = un->next) {
-    visit(un->index);
-    visit(un->value);
+      visit(un->index);
+      visit(un->value);
   }
 
   if (ul.root->isConstantArray()) {

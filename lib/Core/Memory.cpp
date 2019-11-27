@@ -15,6 +15,9 @@
 
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Expr.h"
+#include "klee/ExecutionState.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/Solver.h"
@@ -31,6 +34,11 @@
 
 using namespace llvm;
 using namespace klee;
+
+namespace klee{
+extern Solver* memorySolver;
+extern ExecutionState* memoryState;
+}
 
 namespace {
   cl::opt<bool>
@@ -196,11 +204,11 @@ const UpdateList &ObjectState::getUpdates() const {
       Writes[i] = std::make_pair(un->index, un->value);
     }
 
-    std::vector< ref<ConstantExpr> > Contents(size);
+    std::vector< ref<ConstantExpr> > Contents(size, ConstantExpr::create(0, Expr::Int8));
 
     // Initialize to zeros.
-    for (unsigned i = 0, e = size; i != e; ++i)
-      Contents[i] = ConstantExpr::create(0, Expr::Int8);
+//    for (unsigned i = 0, e = size; i != e; ++i)
+//      Contents[i] = ConstantExpr::create(0, Expr::Int8);
 
     // Pull off as many concrete writes as we can.
     unsigned Begin = 0, End = Writes.size();
@@ -234,6 +242,11 @@ const UpdateList &ObjectState::getUpdates() const {
       std::vector<const UpdateNode*> newUpdates;
       newUpdates.reserve(updates.getSize());
       llvm::errs() << updates.getSize() << " updates on size: " << updates.root->size << "!!!!!!!!!!\n";
+      std::vector<ref<Expr>> seenSymIndices;
+      std::vector<ref<Expr>> emptyConstraints;
+      ConstraintManager cm(emptyConstraints);
+      int chekedCnt = 0;
+
       for (const UpdateNode *un=updates.head; un; un=un->next) {
           if(ConstantExpr* ce = dyn_cast<ConstantExpr>(un->index)) {
               auto idx = ce->getZExtValue();
@@ -241,12 +254,31 @@ const UpdateList &ObjectState::getUpdates() const {
               if(numOverwrites > 0) {
                 removed++;
               } else {
+                seenSymIndices.push_back(un->index);
                   newUpdates.push_back(un);
               }
               overwrites[idx]++;
           } else {
               symbolicIndicies++;
-              newUpdates.push_back(un);
+              bool newIndex = true;
+              if(false && symbolicIndicies > (updates.getSize() / 3) && chekedCnt < 40000000) {
+                  for(auto& idx : seenSymIndices) {
+                      bool ret = false, isTrue = false;
+                      chekedCnt++;
+                      ret = memorySolver->mustBeTrue(
+                          Query(memoryState->constraints,EqExpr::create(idx, un->index)),
+                          isTrue);
+                      if(ret && isTrue) {
+                          llvm::errs() << "\tFound overwrrite! dropping!!!\n";
+                          newIndex = false;
+                          break;
+                      }
+                  }
+              }
+              if(newIndex) {
+                newUpdates.push_back(un);
+                seenSymIndices.push_back(un->index);
+              }
           }
       }
       if(removed > 1) {
@@ -256,6 +288,10 @@ const UpdateList &ObjectState::getUpdates() const {
       }
       updates = uln;
       }
+      if(object->allocSite) {
+          object->allocSite->dump();
+      }
+      llvm::errs() << "\t checked " << chekedCnt << " indicies\n";
       llvm::errs() << "\t symbolic writes: " << symbolicIndicies << "\n";
       llvm::errs() << "\t removed : " << removed << "\n";
       llvm::errs() << "\t overwrites [ ";
@@ -334,6 +370,52 @@ isByteConcrete(i) => !isByteKnownSymbolic(i)
 void ObjectState::fastRangeCheckOffset(ref<Expr> offset,
                                        unsigned *base_r,
                                        unsigned *size_r) const {
+  //if(size == 755 || size == 656) {
+  //    *base_r = 8;
+  //    *size_r = size - 8;
+  static ExprHashMap<unsigned> cache;
+  if( ((size > 506 && size < 1060) || size == 400)
+      && !(object->allocSite && isa<Constant>(object->allocSite) )) {
+      if(isa<AddExpr>(offset)) {
+          if(ConstantExpr* strideIdx = dyn_cast<ConstantExpr>(offset->getKid(0))) {
+              if(strideIdx->getZExtValue() < 9) {
+      //            llvm::errs() << "Stripping stride\n";
+                  offset = offset->getKid(1);
+              }
+          }
+
+      }
+
+      unsigned off = size / 5;
+      auto it = cache.find(offset);
+      if(it != cache.end()) {
+          off = it->second;
+      } else {
+          llvm::errs() << "Calling solver at size: " << size << " offset: " << off<< ".. ";
+          std::vector<ref<Expr>> emptyConstraints;
+          ConstraintManager cm(emptyConstraints);
+          bool ret = false, isTrue = false;
+          ret = memorySolver->mustBeTrue(
+                Query(
+      //                memoryState->constraints,
+                      cm,
+                      UgtExpr::create(offset, ConstantExpr::create(off, offset->getWidth()))),
+                isTrue);
+          if(ret && isTrue) {
+              llvm::errs() << " SUCESS!\n";
+          } else {
+              off = 0;
+              llvm::errs() << "FAIL\n";
+          }
+          cache[offset] = off;
+      }
+
+      *base_r = off;
+      *size_r = size - off;
+      return;
+               
+  } 
+
   *base_r = 0;
   *size_r = size;
 }

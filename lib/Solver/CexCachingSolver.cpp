@@ -95,10 +95,12 @@ class CexCachingSolver : public SolverImpl {
   }
 
   bool getAssignment(const Query& query, Assignment *&result);
+  bool dontAskCore = false;
   
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
+      dontAskCore = true;
    if(CexCacheSeeds) {
    const Array* arr = cache->CreateArray("msg", 8);
    std::vector<const Array*> objects = {arr};
@@ -346,6 +348,8 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   KeyType key;
   if (lookupAssignment(query, key, result))
     return true;
+
+  if(dontAskCore) return false;
 
   std::vector<const Array*> objects;
   findSymbolicObjects(key.begin(), key.end(), objects);

@@ -87,6 +87,8 @@ using namespace llvm;
 using namespace klee;
 
 namespace klee {
+Solver* memorySolver = nullptr;
+ExecutionState* memoryState = nullptr;
 cl::OptionCategory DebugCat("Debugging options",
                             "These are debugging options.");
 
@@ -453,8 +455,11 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
+  
+  klee::memorySolver = solver;
+  klee::memorySolver = coreSolver;
 
-  this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
+  this->fastSolver = klee::createIndependentSolver(klee::createCachingSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache)));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
@@ -3475,11 +3480,16 @@ void Executor::executeAlloc(ExecutionState &state,
                             bool zeroMemory,
                             const ObjectState *reallocFrom,
                             size_t allocationAlignment) {
+  memoryState = &state;
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
     const llvm::Value *allocSite = state.prevPC->inst;
     if (allocationAlignment == 0) {
       allocationAlignment = getAllocationAlignment(allocSite);
+    }
+    if(CE->getZExtValue() > 500  && !isLocal) {
+        llvm::errs() << "Allocation! " << CE->getZExtValue() << "======= \n";
+        state.dumpStack(llvm::errs());
     }
     MemoryObject *mo =
         memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
@@ -3703,6 +3713,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
         } else {
+          if(mo->size == 656 && !isa<ConstantExpr>(offset)) {
+              llvm::errs() << "Symbolic write!\n";
+              state.dumpStack(llvm::errs());
+          }
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
         }          
