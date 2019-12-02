@@ -61,6 +61,14 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::vaend:
       case Intrinsic::fabs:
         break;
+      case Intrinsic::x86_sse2_cvtsd2si:
+        ii->replaceAllUsesWith(Constant::getNullValue(ii->getType()));
+        ii->eraseFromParent();
+        break;
+      case Intrinsic::rint:
+        ii->replaceAllUsesWith(ii->getArgOperand(0));
+        ii->eraseFromParent();
+        break;
 
         // Lower vacopy so that object resolution etc is handled by
         // normal instructions.
