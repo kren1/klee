@@ -159,13 +159,13 @@ namespace klee {
     void printName(llvm::raw_ostream &os) {
       os << "(NURS:";
       switch(type) {
-      case Depth              : os << "D "; 
-      case RP                 : os << "R "; 
-      case QueryCost          : os << "Q "; 
-      case InstCount          : os << "I "; 
-      case CPInstCount        : os << "C "; 
-      case MinDistToUncovered : os << "M "; 
-      case CoveringNew        : os << "C "; 
+      case Depth              : os << "D "; break; 
+      case RP                 : os << "R "; break; 
+      case QueryCost          : os << "Q "; break; 
+      case InstCount          : os << "I "; break; 
+      case CPInstCount        : os << "C "; break; 
+      case MinDistToUncovered : os << "M "; break; 
+      case CoveringNew        : os << "C "; break; 
       default                 : os << "<unknown type>\n"; return;
       } 
       os << size << ")";
