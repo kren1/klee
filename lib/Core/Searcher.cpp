@@ -37,6 +37,7 @@
 #include <climits>
 #include <unordered_set>
 #include <chrono>
+#include <math.h>
 
 using namespace klee;
 using namespace llvm;
@@ -179,6 +180,7 @@ WeightedRandomSearcher::WeightedRandomSearcher(WeightType _type)
     type(_type) {
   switch(type) {
   case Depth: 
+  case RP: 
     updateWeights = false;
     break;
   case InstCount:
@@ -205,7 +207,9 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   switch(type) {
   default:
   case Depth: 
-    return es->weight;
+    return es->depth;
+  case RP: 
+    return pow(2.0, -1*es->depth);
   case InstCount: {
     uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
                                                           es->pc->info->id);
