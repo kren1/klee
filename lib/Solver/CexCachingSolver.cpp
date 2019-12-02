@@ -114,7 +114,7 @@ public:
 
    //std::vector< std::vector<unsigned char> > values2 = {{'B', 'A', ':' ,'l','o','\0','j','j'},
    std::vector< std::vector<unsigned char> > values2 = {
-   {'S', 'E', 'L' ,'E','C','T',' ','*', ' ', 'F', 'R', 'O','M', ' ', 'a', ';', ' ', ' ', ' ', ' ', ' '},
+   {'S', 'E', 'L' ,'E','C','T',' ','*', ' ', 'F', 'R', 'O','M', ' ', 'a', ';', ' ', ' ', ' ', ' '},
    {
    0x03, 0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x00, 0x00, 'A' , '*' , 0x00, 0x00, 

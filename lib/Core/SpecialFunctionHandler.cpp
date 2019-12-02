@@ -716,7 +716,7 @@ void SpecialFunctionHandler::handleMemset(ExecutionState &state,
   assert(arguments.size()==3 &&
          "invalid number of arguments to memset");
   state.dumpStack(llvm::errs());
-  auto address = arguments[0];
+  auto address = executor.toConstant(state, arguments[0], "memset addr");
   auto charToWrite = arguments[1];
   if(charToWrite->getWidth() != Expr::Int8) {
       charToWrite = ExtractExpr::create(charToWrite, 0, Expr::Int8);

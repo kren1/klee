@@ -457,7 +457,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
   
   klee::memorySolver = solver;
-  klee::memorySolver = coreSolver;
+  //klee::memorySolver = klee::createCexCachingSolver(coreSolver);
+  klee::memorySolver = (coreSolver);
 
   this->fastSolver = klee::createIndependentSolver(klee::createCachingSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache)));
 

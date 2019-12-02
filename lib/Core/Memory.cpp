@@ -19,6 +19,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Module/KInstruction.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/Solver.h"
 #include "klee/util/BitArray.h"
@@ -34,6 +35,7 @@
 
 using namespace llvm;
 using namespace klee;
+using namespace std::literals::chrono_literals;
 
 namespace klee{
 extern Solver* memorySolver;
@@ -373,7 +375,7 @@ void ObjectState::fastRangeCheckOffset(ref<Expr> offset,
   //if(size == 755 || size == 656) {
   //    *base_r = 8;
   //    *size_r = size - 8;
-  static ExprHashMap<unsigned> cache;
+  static ExprHashMap<std::pair<unsigned,unsigned>> cache;
   if( ((size > 506 && size < 1060) || size == 400)
       && !(object->allocSite && isa<Constant>(object->allocSite) )) {
       if(isa<AddExpr>(offset)) {
@@ -386,32 +388,69 @@ void ObjectState::fastRangeCheckOffset(ref<Expr> offset,
 
       }
 
-      unsigned off = size / 5;
+      unsigned off = 0;
+      unsigned siz = size;
       auto it = cache.find(offset);
       if(it != cache.end()) {
-          off = it->second;
+          off = it->second.first;
+          siz = it->second.second;
       } else {
+          memorySolver->setCoreSolverTimeout(time::Span(1s));
           llvm::errs() << "Calling solver at size: " << size << " offset: " << off<< ".. ";
           std::vector<ref<Expr>> emptyConstraints;
           ConstraintManager cm(emptyConstraints);
           bool ret = false, isTrue = false;
-          ret = memorySolver->mustBeTrue(
-                Query(
-      //                memoryState->constraints,
-                      cm,
-                      UgtExpr::create(offset, ConstantExpr::create(off, offset->getWidth()))),
-                isTrue);
-          if(ret && isTrue) {
-              llvm::errs() << " SUCESS!\n";
-          } else {
+          ref<ConstantExpr> example;
+          llvm::errs() << "Calling solver ..";
+          ret = memorySolver->getValue(Query(cm, offset), example);
+          if(ret) {
               off = 0;
-              llvm::errs() << "FAIL\n";
+              if(example->getZExtValue() > 7)
+                off = example->getZExtValue() - 8;
+              llvm::errs() <<  " got: " << example->getZExtValue() << " checking lower bound ... " << off;
+              if(size == 400 && example->getZExtValue() == 0) {
+                  llvm::errs() << "Wrote db to parser!\n";
+                  memoryState->dumpStack(llvm::errs());
+                  memoryState->prevPC->inst->dump();
+                  memoryState->pc->inst->dump();
+
+              }
+              ret = memorySolver->mustBeTrue(
+                    Query(
+          //                memoryState->constraints,
+                          cm,
+                          UgtExpr::create(offset, ConstantExpr::create(off, offset->getWidth()))),
+                    isTrue);
+              if(ret && isTrue) {
+                  llvm::errs() << " SUCESS!\n";
+              } else {
+                  off = 0;
+                  llvm::errs() << " FAIL\n";
+              }
+              if(off > 0) {
+                  siz = 24;
+                  if(off + siz > size) siz = size - off; 
+                  llvm::errs() << "Checking upperbound .. " << off+siz;
+                   ret = memorySolver->mustBeTrue(
+                        Query(
+                             cm,
+                             UltExpr::create(offset, ConstantExpr::create(off+siz, offset->getWidth()))),
+                        isTrue);
+                  if(ret && isTrue) {
+                      llvm::errs() << " SUCESS!\n";
+                  } else {
+                      siz = size - off;
+                      llvm::errs() << "FAIL\n";
+                  }
+              }
+     
           }
-          cache[offset] = off;
+          memorySolver->setCoreSolverTimeout(time::Span());
+         cache[offset] = std::make_pair(off,siz);
       }
 
       *base_r = off;
-      *size_r = size - off;
+      *size_r = siz;
       return;
                
   } 
