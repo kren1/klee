@@ -108,8 +108,8 @@ public:
    std::vector< std::vector<unsigned char> > values1 = {{'h', 'e', 'l','l','o','j','j','j'}};
    binding = new Assignment (objects, values1);
    //assignmentsTable.insert(binding);
-
-   std::vector< std::vector<unsigned char> > values2 = {{'B', 'A', ':' ,'l','o','\0','j','j'},
+   std::vector< std::vector<unsigned char> > values2 = {
+   {'S', 'E', 'L' ,'E','C','T',' ','*', ' ', 'F', 'R', 'O','M', ' ', 'a', ';', ' ', ' ', ' ', ' '},
    {
    0x03, 0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x00, 0x00, 'A' , '*' , 0x00, 0x00, 
@@ -124,11 +124,12 @@ public:
    {1,0,0,0}
    };
    binding = new Assignment (
-    {cache->CreateArray("stdin", 8), 
+    {cache->CreateArray("stdin", 20), 
      cache->CreateArray("stdin-stat", 144),
      cache->CreateArray("model_version",4)}, values2);
    assignmentsTable.insert(binding);
-   }
+
+    }
   }
   ~CexCachingSolver();
   
