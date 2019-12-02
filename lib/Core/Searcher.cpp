@@ -205,7 +205,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   switch(type) {
   default:
   case Depth: 
-    return es->weight;
+    return es->depth;
   case InstCount: {
     uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
                                                           es->pc->info->id);
@@ -241,6 +241,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
 void WeightedRandomSearcher::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
+  size = size + addedStates.size() - removedStates.size();
   if (current && updateWeights &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end())
@@ -462,8 +463,9 @@ bool PendingSearcher::empty() {
   exec->solver->setTimeout(maxReviveTime);
   while(baseNormalSearcher->empty()) {
       if(basePendingSearcher->empty()) return true;
-//      llvm::errs() << "Reviving pending state: ";
+      llvm::errs() << "Reviving pending state of depth ";
       auto& es = basePendingSearcher->selectState();
+      llvm::errs() << es.depth << ": ";
       assert(!es.pendingConstraint.isNull());
       ref<Expr> expr = es.pendingConstraint;
       es.pendingConstraint = nullptr;
@@ -473,9 +475,9 @@ bool PendingSearcher::empty() {
           exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
           basePendingSearcher->update(nullptr,{}, {&es});
- //         llvm::errs() << "success\n";
+          llvm::errs() << "success\n";
       } else {
- //         llvm::errs() << "killing it\n";
+          llvm::errs() << "killing it\n";
           basePendingSearcher->update(nullptr,{}, {&es});
           exec->processTree->remove(es.ptreeNode);
           auto it2 = exec->states.find(&es);
