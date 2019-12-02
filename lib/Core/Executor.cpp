@@ -3605,12 +3605,21 @@ void Executor::executeFree(ExecutionState &state,
       bindLocal(target, *zeroPointer.first, Expr::createPointer(0));
   }
   if (zeroPointer.second) { // address != 0
-    ExactResolutionList rl;
-    resolveExact(*zeroPointer.second, address, rl, "free");
+      
+  ObjectPair op;
+  bool success;
+  if (!zeroPointer.second->addressSpace.resolveOne(*zeroPointer.second, solver, address, op, success)) {
+    address = toConstant(*zeroPointer.second, address, "resolveOne failure");
+    success = zeroPointer.second->addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+  }
+//    ExactResolutionList rl;
+//    resolveExact(*zeroPointer.second, address, rl, "free");
     
-    for (Executor::ExactResolutionList::iterator it = rl.begin(), 
-           ie = rl.end(); it != ie; ++it) {
-      const MemoryObject *mo = it->first.first;
+//    for (Executor::ExactResolutionList::iterator it = rl.begin(), 
+//           ie = rl.end(); it != ie; ++it) {
+//      const MemoryObject *mo = it->first.first;
+      auto it = &zeroPointer;
+      auto mo = op.first;
       if (mo->isLocal) {
         terminateStateOnError(*it->second, "free of alloca", Free, NULL,
                               getAddressInfo(*it->second, address));
@@ -3622,7 +3631,7 @@ void Executor::executeFree(ExecutionState &state,
         if (target)
           bindLocal(target, *it->second, Expr::createPointer(0));
       }
-    }
+//    }
   }
 }
 
