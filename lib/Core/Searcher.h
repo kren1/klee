@@ -143,6 +143,7 @@ namespace klee {
     DiscretePDF<ExecutionState*> *states;
     WeightType type;
     bool updateWeights;
+    unsigned size = 0;
     
     double getWeight(ExecutionState*);
 
@@ -156,17 +157,18 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "WeightedRandomSearcher::";
+      os << "(NURS:";
       switch(type) {
-      case Depth              : os << "Depth\n"; return;
-      case RP                 : os << "RandomPath\n"; return;
-      case QueryCost          : os << "QueryCost\n"; return;
-      case InstCount          : os << "InstCount\n"; return;
-      case CPInstCount        : os << "CPInstCount\n"; return;
-      case MinDistToUncovered : os << "MinDistToUncovered\n"; return;
-      case CoveringNew        : os << "CoveringNew\n"; return;
+      case Depth              : os << "D "; 
+      case RP                 : os << "R "; 
+      case QueryCost          : os << "Q "; 
+      case InstCount          : os << "I "; 
+      case CPInstCount        : os << "C "; 
+      case MinDistToUncovered : os << "M "; 
+      case CoveringNew        : os << "C "; 
       default                 : os << "<unknown type>\n"; return;
-      }
+      } 
+      os << size << ")";
     }
   };
 

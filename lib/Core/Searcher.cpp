@@ -245,6 +245,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
 void WeightedRandomSearcher::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
+  size = size + addedStates.size() - removedStates.size();
   if (current && updateWeights &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end())
