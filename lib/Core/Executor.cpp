@@ -3605,20 +3605,21 @@ void Executor::resolveExact(ExecutionState &state,
   }
 }
 
-void Executor::executeMemoryOperation(ExecutionState &state,
+void Executor::executeMemoryOperation(ExecutionState &stateIn,
                                       bool isWrite,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
                                       KInstruction *target /* undef if write */) {
+  ExecutionState* state = &stateIn;
   Expr::Width type = (isWrite ? value->getWidth() : 
                      getWidthForLLVMType(target->inst->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
-      address = state.constraints.simplifyExpr(address);
+      address = state->constraints.simplifyExpr(address);
     if (isWrite && !isa<ConstantExpr>(value))
-      value = state.constraints.simplifyExpr(value);
+      value = state->constraints.simplifyExpr(value);
   }
 
   address = optimizer.optimizeExpr(address, true);
@@ -3627,9 +3628,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
-    address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+  if (!state->addressSpace.resolveOne(*state, solver, address, op, success)) {
+    address = toConstant(*state, address, "resolveOne failure");
+    success = state->addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
   solver->setTimeout(time::Span());
 
@@ -3637,44 +3638,48 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = op.first;
 
     if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
-      address = toConstant(state, address, "max-sym-array-size");
+      address = toConstant(*state, address, "max-sym-array-size");
     }
     
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
 
-    bool inBounds;
-    solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state, check, inBounds);
-    solver->setTimeout(time::Span());
-    if (!success) {
-      state.pc = state.prevPC;
-      terminateStateEarly(state, "Query timed out (bounds check).");
-      return;
+    StatePair inOutOfBoundState = fork(*state, check, true);
+
+    assert(inOutOfBoundState.first && "We resolved to an object, so it must be maybeInBounds");
+    if(inOutOfBoundState.first->pendingConstraint.isNull() 
+        || attemptToRevive(inOutOfBoundState.first)) {
+        
+        state = inOutOfBoundState.first;
+    } else {
+        assert(false && "If we resolved to an object, there must be cex inbound example!");
     }
 
-    if (inBounds) {
-      const ObjectState *os = op.second;
-      if (isWrite) {
-        if (os->readOnly) {
-          terminateStateOnError(state, "memory error: object read only",
-                                ReadOnly);
-        } else {
-          ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-          wos->write(offset, value);
-        }          
-      } else {
-        ref<Expr> result = os->read(offset, type);
-        
-        if (interpreterOpts.MakeConcreteSymbolic)
-          result = replaceReadWithSymbolic(state, result);
-        
-        bindLocal(target, state, result);
-      }
-
-      return;
+    if(inOutOfBoundState.second) { //out of bound state
+        klee_warning_once(0,"Delegating OOB check");
+        inOutOfBoundState.second->pc = inOutOfBoundState.second->prevPC;
     }
+    
+     const ObjectState *os = op.second;
+     if (isWrite) {
+       if (os->readOnly) {
+         terminateStateOnError(*state, "memory error: object read only",
+                               ReadOnly);
+       } else {
+         ObjectState *wos = state->addressSpace.getWriteable(mo, os);
+         wos->write(offset, value);
+       }          
+     } else {
+       ref<Expr> result = os->read(offset, type);
+       
+       if (interpreterOpts.MakeConcreteSymbolic)
+         result = replaceReadWithSymbolic(*state, result);
+       
+       bindLocal(target, *state, result);
+     }
+
+     return;
   } 
 
   // we are on an error path (no resolution, multiple resolution, one
@@ -3683,12 +3688,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   address = optimizer.optimizeExpr(address, true);
   ResolutionList rl;  
   solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
+  bool incomplete = state->addressSpace.resolve(*state, solver, address, rl,
                                                0, coreSolverTimeout);
   solver->setTimeout(time::Span());
   
   // XXX there is some query wasteage here. who cares?
-  ExecutionState *unbound = &state;
+  ExecutionState *unbound = state;
   
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
