@@ -29,7 +29,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace {
+namespace klee {
 
 llvm::cl::opt<bool> DebugDumpSTPQueries(
     "debug-dump-stp-queries", llvm::cl::init(false),

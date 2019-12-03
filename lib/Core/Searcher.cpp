@@ -46,7 +46,9 @@ using namespace std::literals::chrono_literals;
 
 namespace klee {
   extern RNG theRNG;
+  extern llvm::cl::opt<bool> IgnoreSolverFailures;
 }
+
 
 cl::opt<std::string> MaxReviveTime(
     "max-revive-time",
@@ -422,6 +424,8 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     int revived = 0, killed = 0;
  
     exec->solver->setTimeout(maxReviveTime);
+    bool rememberIgnore =  IgnoreSolverFailures;
+    IgnoreSolverFailures = true;
     while(!basePendingSearcher->empty() && size > 0) {
       if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
@@ -451,6 +455,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
 
     }
     exec->solver->setTimeout(time::Span());
+    IgnoreSolverFailures = rememberIgnore;
     errs() << "==== Deleted " << killed << " and revived " << revived << "\n";
 
     //assert(!basePendingSearcher->empty() && "TODO delete more states than are pending");
