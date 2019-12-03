@@ -487,6 +487,10 @@ public:
     return *interpreterHandler;
   }
 
+  //If current state is pending it uses fastSolver to attempt to solve the constraint
+  //and make it non pending. Returns true if succesful, false otherwise
+  bool attemptToRevive(ExecutionState* current);
+
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
   /// which also manages propagation of implied values,

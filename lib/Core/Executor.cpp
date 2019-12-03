@@ -2738,9 +2738,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 }
 
-void Executor::updateStates(ExecutionState *current) {
-//  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
-  
+bool Executor::attemptToRevive(ExecutionState* current) {
   bool solverResult = false;
   bool status;
   if(current && !current->pendingConstraint.isNull()) {
@@ -2750,19 +2748,19 @@ void Executor::updateStates(ExecutionState *current) {
 //          errs() << ("current CEX cache HIT!\n") ;
           addConstraint(*current, current->pendingConstraint);
           current->pendingConstraint = nullptr;
+          return true;
       }
   }
+  return false;
+}
 
-  for(ExecutionState* current : addedStates) {
-      if(!solverResult && !current->pendingConstraint.isNull()) {
-          Query qr(current->constraints, current->pendingConstraint);
-          status = fastSolver->mayBeTrue(qr, solverResult);
-          if(status && solverResult) {
-//              errs() << ("added CEX cache HIT!\n");
-              addConstraint(*current, current->pendingConstraint);
-              current->pendingConstraint = nullptr;
-          }
-      }
+void Executor::updateStates(ExecutionState *current) {
+//  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
+  
+  attemptToRevive(current);
+
+  for(ExecutionState* added : addedStates) {
+      attemptToRevive(added);
   }
 
   if (searcher) {
