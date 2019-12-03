@@ -3558,17 +3558,21 @@ void Executor::executeFree(ExecutionState &state,
         success = zeroPointer.second->addressSpace.resolveOne(cast<ConstantExpr>(address), op);
       }
       auto it = &zeroPointer;
-      auto mo = op.first;
-      if (mo->isLocal) {
-        terminateStateOnError(*it->second, "free of alloca", Free, NULL,
-                              getAddressInfo(*it->second, address));
-      } else if (mo->isGlobal) {
-        terminateStateOnError(*it->second, "free of global", Free, NULL,
-                              getAddressInfo(*it->second, address));
+      if(success) {
+          auto mo = op.first;
+          if (mo->isLocal) {
+            terminateStateOnError(*it->second, "free of alloca", Free, NULL,
+                                  getAddressInfo(*it->second, address));
+          } else if (mo->isGlobal) {
+            terminateStateOnError(*it->second, "free of global", Free, NULL,
+                                  getAddressInfo(*it->second, address));
+          } else {
+            it->second->addressSpace.unbindObject(mo);
+            if (target)
+              bindLocal(target, *it->second, Expr::createPointer(0));
+          }
       } else {
-        it->second->addressSpace.unbindObject(mo);
-        if (target)
-          bindLocal(target, *it->second, Expr::createPointer(0));
+          //this can happen if pointer is 0 in the pending constraint
       }
   }
 }
