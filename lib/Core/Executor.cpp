@@ -145,6 +145,19 @@ cl::opt<bool>
                        cl::desc("Simplify symbolic accesses using equalities "
                                 "from other constraints (default=false)"),
                        cl::cat(SolvingCat));
+cl::opt<bool>
+    PendingBounds("pending-bounds",
+                       cl::init(false),
+                       cl::desc("Use pending states for MO bounds checks(default=false)"),
+                       cl::cat(SolvingCat));
+cl::opt<bool>
+    PendingKleeChecks("pending-checks",
+                       cl::init(false),
+                       cl::desc("Use pending states inside klee_ functions(default=false)"),
+                       cl::cat(SolvingCat));
+
+
+
 
 cl::opt<bool>
     EqualitySubstitution("equality-substitution", cl::init(true),
@@ -2756,11 +2769,20 @@ bool Executor::attemptToRevive(ExecutionState* current) {
 
 void Executor::updateStates(ExecutionState *current) {
 //  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
-  
+  Solver* tmp = fastSolver;
+  bool is_klee_fun = current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
+  if(!PendingKleeChecks && is_klee_fun) {
+      fastSolver=solver->solver;
+  }
+
   attemptToRevive(current);
 
   for(ExecutionState* added : addedStates) {
       attemptToRevive(added);
+  }
+
+  if(is_klee_fun) {
+      fastSolver = tmp;
   }
 
   if (searcher) {
@@ -3644,42 +3666,54 @@ void Executor::executeMemoryOperation(ExecutionState &stateIn,
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
+  
+    bool inBounds = false;
+    if(PendingBounds) { //pending memory case
+        StatePair inOutOfBoundState = fork(*state, check, true);
+        assert(inOutOfBoundState.first && "We resolved to an object, so it must be maybeInBounds");
+        if(inOutOfBoundState.first->pendingConstraint.isNull() 
+            || attemptToRevive(inOutOfBoundState.first)) {
+            
+            state = inOutOfBoundState.first;
+        } else {
+            assert(false && "If we resolved to an object, there must be cex inbound example!");
+        }
 
-    StatePair inOutOfBoundState = fork(*state, check, true);
-
-    assert(inOutOfBoundState.first && "We resolved to an object, so it must be maybeInBounds");
-    if(inOutOfBoundState.first->pendingConstraint.isNull() 
-        || attemptToRevive(inOutOfBoundState.first)) {
-        
-        state = inOutOfBoundState.first;
-    } else {
-        assert(false && "If we resolved to an object, there must be cex inbound example!");
+        if(inOutOfBoundState.second) { //out of bound state
+            klee_warning_once(0,"Delegating OOB check");
+            inOutOfBoundState.second->pc = inOutOfBoundState.second->prevPC;
+        }
+    } else { //checking case
+            solver->setTimeout(coreSolverTimeout);
+            bool success = solver->mustBeTrue(*state, check, inBounds);
+            solver->setTimeout(time::Span());
+            if (!success) {
+              state->pc = state->prevPC;
+              terminateStateEarly(*state, "Query timed out (bounds check).");
+              return;
+            }
     }
+    if(PendingBounds || inBounds) {
+         const ObjectState *os = op.second;
+         if (isWrite) {
+           if (os->readOnly) {
+             terminateStateOnError(*state, "memory error: object read only",
+                                   ReadOnly);
+           } else {
+             ObjectState *wos = state->addressSpace.getWriteable(mo, os);
+             wos->write(offset, value);
+           }          
+         } else {
+           ref<Expr> result = os->read(offset, type);
+           
+           if (interpreterOpts.MakeConcreteSymbolic)
+             result = replaceReadWithSymbolic(*state, result);
+           
+           bindLocal(target, *state, result);
+         }
 
-    if(inOutOfBoundState.second) { //out of bound state
-        klee_warning_once(0,"Delegating OOB check");
-        inOutOfBoundState.second->pc = inOutOfBoundState.second->prevPC;
-    }
-    
-     const ObjectState *os = op.second;
-     if (isWrite) {
-       if (os->readOnly) {
-         terminateStateOnError(*state, "memory error: object read only",
-                               ReadOnly);
-       } else {
-         ObjectState *wos = state->addressSpace.getWriteable(mo, os);
-         wos->write(offset, value);
-       }          
-     } else {
-       ref<Expr> result = os->read(offset, type);
-       
-       if (interpreterOpts.MakeConcreteSymbolic)
-         result = replaceReadWithSymbolic(*state, result);
-       
-       bindLocal(target, *state, result);
+         return;
      }
-
-     return;
   } 
 
   // we are on an error path (no resolution, multiple resolution, one
