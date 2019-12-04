@@ -13,6 +13,7 @@
 
 #include "KLEEIRMetaData.h"
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -159,9 +160,11 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
 
 char DivFaultPass::ID;
 
+void DivFaultPass::getAnalysisUsage(AnalysisUsage &AU) const {
+     AU.setPreservesCFG();
+     AU.addRequired<LoopInfoWrapperPass>();
+}
 bool DivFaultPass::runOnModule(Module &M) {
-  std::vector<llvm::BinaryOperator *> divInstruction;
-
   LLVMContext &ctx = M.getContext();
   KleeIRMetaData md(ctx);
   APInt location(32, 0);
@@ -173,6 +176,7 @@ bool DivFaultPass::runOnModule(Module &M) {
   for (auto &F : M) {
     if (F.hasName() && F.getName().startswith("klee_"))
       continue;
+    if(F.isDeclaration()) continue;
     const DebugLoc* b = nullptr;
     for(auto &BB : F) {
         for(auto &I : BB) {
@@ -182,8 +186,10 @@ bool DivFaultPass::runOnModule(Module &M) {
             }
         }
     }
-    for (auto &BB : F) {
 
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    for (auto &BB : F) {
+      if(LI.getLoopFor(&BB) != nullptr) continue; //skip faults in loops
       if (KleeIRMetaData::hasAnnotation(BB.back(), "klee.fault.div", "True"))
         continue;
       location++;

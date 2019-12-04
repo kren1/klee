@@ -18,6 +18,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/PassAnalysisSupport.h"
 
 namespace llvm {
 class Function;
@@ -106,6 +107,7 @@ class DivFaultPass : public llvm::ModulePass {
 public:
   DivFaultPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &M) override;
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 };
 
 
