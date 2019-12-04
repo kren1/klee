@@ -322,6 +322,17 @@ std::vector<ExecutionState *> RandomPathSearcher::selectForDelition(int size) {
     }
     return ret;
 }
+
+std::vector<ExecutionState *> WeightedRandomSearcher::selectForDelition(int size) {
+    std::unordered_set<ExecutionState*> ret;
+    while(size > 0) {
+        size--;
+        ret.insert(&selectState());
+    }
+    std::vector<ExecutionState* > ret1(ret.begin(), ret.end());
+    errs() << "NURs Deliting " << ret1.size() << " states\n";
+    return ret1;
+}
 void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,

@@ -152,6 +152,7 @@ namespace klee {
     ~WeightedRandomSearcher();
 
     ExecutionState &selectState();
+    std::vector<ExecutionState *> selectForDelition(int size);
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
