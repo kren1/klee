@@ -156,3 +156,45 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
 
   return true;
 }
+
+char DivFaultPass::ID;
+
+bool DivFaultPass::runOnModule(Module &M) {
+  std::vector<llvm::BinaryOperator *> divInstruction;
+
+  LLVMContext &ctx = M.getContext();
+  KleeIRMetaData md(ctx);
+  APInt location(32, 0);
+  auto divFaultFunction = cast<Function>(
+      M.getOrInsertFunction("klee_div_fault", Type::getVoidTy(ctx),
+                            Type::getInt32Ty(ctx) KLEE_LLVM_GOIF_TERMINATOR));
+
+
+  for (auto &F : M) {
+    if (F.hasName() && F.getName().startswith("klee_"))
+      continue;
+    const DebugLoc* b = nullptr;
+    for(auto &BB : F) {
+        for(auto &I : BB) {
+            if(I.getDebugLoc()) {
+                b = &I.getDebugLoc();
+                break;
+            }
+        }
+    }
+    for (auto &BB : F) {
+
+      if (KleeIRMetaData::hasAnnotation(BB.back(), "klee.fault.div", "True"))
+        continue;
+      location++;
+      llvm::IRBuilder<> Builder(&BB.back());
+      auto call = Builder.CreateCall(divFaultFunction, Constant::getIntegerValue(Type::getInt32Ty(ctx), location));
+      if(b)
+        call->setDebugLoc(DebugLoc(b->get()));
+      md.addAnnotation(BB.back(), "klee.fault.div", "True");
+
+    }
+  }
+
+  return true;
+}

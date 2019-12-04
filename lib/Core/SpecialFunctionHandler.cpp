@@ -29,6 +29,7 @@
 
 #include <errno.h>
 #include <sstream>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace klee;
@@ -316,16 +317,26 @@ void SpecialFunctionHandler::handleAssertFail(ExecutionState &state,
 				 Executor::Assert);
 }
 
+SQLIntStatistic uniqueDivFault("UniqueDivFault", "UDivF");
 void SpecialFunctionHandler::handleReportError(ExecutionState &state,
                                                KInstruction *target,
                                                std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==4 && "invalid number of arguments to klee_report_error");
   
   // arguments[0], arguments[1] are file, line
+  auto errType = readStringAtAddress(state, arguments[3]);
+  static std::unordered_set<uint64_t> seenFaults;
+  if(errType == "div.fault") {
+      auto loc = dyn_cast<ConstantExpr>(arguments[1])->getZExtValue();
+      if(!seenFaults.count(loc)) {
+          ++uniqueDivFault;
+          seenFaults.insert(loc);
+      }
+  }
   executor.terminateStateOnError(state,
 				 readStringAtAddress(state, arguments[2]),
 				 Executor::ReportError,
-				 readStringAtAddress(state, arguments[3]).c_str());
+				 errType.c_str());
 }
 
 void SpecialFunctionHandler::handleOpenMerge(ExecutionState &state,
