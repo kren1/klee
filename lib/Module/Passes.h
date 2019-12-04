@@ -100,6 +100,15 @@ public:
   bool runOnModule(llvm::Module &M) override;
 };
 
+class DivFaultPass : public llvm::ModulePass {
+  static char ID;
+
+public:
+  DivFaultPass() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M) override;
+};
+
+
 /// This pass injects checks to check for overshifting.
 ///
 /// Overshifting is where a Shl, LShr or AShr is performed
