@@ -2770,7 +2770,7 @@ bool Executor::attemptToRevive(ExecutionState* current) {
 void Executor::updateStates(ExecutionState *current) {
 //  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
   Solver* tmp = fastSolver;
-  bool is_klee_fun = current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
+  bool is_klee_fun = current && current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
   if(!PendingKleeChecks && is_klee_fun) {
       fastSolver=solver->solver;
   }
