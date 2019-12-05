@@ -468,6 +468,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
+  this->noCexSolver = klee::createIndependentSolver(klee::createCachingSolver(coreSolver));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
@@ -2772,7 +2773,7 @@ void Executor::updateStates(ExecutionState *current) {
   Solver* tmp = fastSolver;
   bool is_klee_fun = current && current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
   if(!PendingKleeChecks && is_klee_fun) {
-      fastSolver=solver->solver;
+      fastSolver = noCexSolver;
   }
 
   attemptToRevive(current);

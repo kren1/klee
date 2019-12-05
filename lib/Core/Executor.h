@@ -133,6 +133,7 @@ private:
 
   ExternalDispatcher *externalDispatcher;
   Solver *fastSolver;
+  Solver *noCexSolver;
   MemoryManager *memory;
   std::set<ExecutionState*> states;
   StatsTracker *statsTracker;
