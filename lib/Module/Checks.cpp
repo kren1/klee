@@ -30,8 +30,15 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include<random>
+
 using namespace llvm;
 using namespace klee;
+
+cl::opt<double> FaultPct(
+    "fault-pct", cl::init(1.),
+    cl::desc("percetegae of basic block with faults"
+             "(default=1.0 (always))"));
 
 char DivCheckPass::ID;
 
@@ -168,6 +175,9 @@ bool DivFaultPass::runOnModule(Module &M) {
   LLVMContext &ctx = M.getContext();
   KleeIRMetaData md(ctx);
   APInt location(32, 0);
+  std::mt19937 generator(5564354);
+  std::bernoulli_distribution distribution(FaultPct);
+
   auto divFaultFunction = cast<Function>(
       M.getOrInsertFunction("klee_div_fault", Type::getVoidTy(ctx),
                             Type::getInt32Ty(ctx) KLEE_LLVM_GOIF_TERMINATOR));
@@ -187,11 +197,15 @@ bool DivFaultPass::runOnModule(Module &M) {
         }
     }
 
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+//    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     for (auto &BB : F) {
-      if(LI.getLoopFor(&BB) != nullptr) continue; //skip faults in loops
+//      if(LI.getLoopFor(&BB) != nullptr) continue; //skip faults in loops
       if (KleeIRMetaData::hasAnnotation(BB.back(), "klee.fault.div", "True"))
         continue;
+      if(!distribution(generator)) {
+        md.addAnnotation(BB.back(), "klee.fault.div", "True");
+        continue;
+      }
       location++;
       llvm::IRBuilder<> Builder(&BB.back());
       auto call = Builder.CreateCall(divFaultFunction, Constant::getIntegerValue(Type::getInt32Ty(ctx), location));
