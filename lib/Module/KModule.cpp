@@ -247,7 +247,9 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
 
   // This pass will replace atomic instructions with non-atomic operations
   pm.add(createLowerAtomicPass());
-  if (InjectFaults) pm.add(new DivFaultPass());
+  if (InjectFaults) {
+      pm.add(new DivFaultPass());
+  }
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
 

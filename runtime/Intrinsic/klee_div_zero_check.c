@@ -17,7 +17,8 @@ void klee_div_zero_check(long long z) {
 static int isInit = 0;
 static int  symVar;
 //void klee_div_fault(int location) {
-__attribute__((optnone)) void klee_div_fault(int location) {
+__attribute__(( always_inline)) void klee_div_fault(int location) {
+#pragma clang optimize off
     if(isInit == 0) {
         klee_make_symbolic(&symVar, sizeof(symVar), "divFautlVar");
         isInit = 1;
@@ -27,4 +28,5 @@ __attribute__((optnone)) void klee_div_fault(int location) {
     }
 
     1000 / ( symVar - location);
+#pragma clang optimize on
 }
