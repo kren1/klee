@@ -35,6 +35,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -177,8 +178,10 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
 #ifdef USE_WORKAROUND_LLVM_PR39177
   addPass(Passes, new klee::WorkaroundLLVMPR39177Pass());
 #endif
+  
 
   // DWD - Run the opt standard pass list as well.
+  addPass(Passes, createAlwaysInlinerLegacyPass());
   AddStandardCompilePasses(Passes);
 
   // Now that composite has been compiled, scan through the module, looking
