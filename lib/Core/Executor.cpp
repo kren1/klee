@@ -2012,13 +2012,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       /* XXX This is wasteful, no need to do a full evaluate since we
          have already got a value. But in the end the caches should
          handle it for us, albeit with some overhead. */
-      do {
         v = optimizer.optimizeExpr(v, true);
         ref<ConstantExpr> value;
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true);
+        attemptToRevive(res.first, fastSolver);
         if (res.first) {
           uint64_t addr = value->getZExtValue();
           if (legalFunctions.count(addr)) {
@@ -2038,10 +2038,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
             }
           }
         }
+        if(res.second) {
+            res.second->pc = res.second->prevPC;
+        }
 
-        first = false;
-        free = res.second;
-      } while (free);
     }
     break;
   }
