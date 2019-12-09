@@ -289,6 +289,7 @@ void KModule::optimiseAndPrepare(
   // directly I think?
   legacy::PassManager pm3;
   pm3.add(createCFGSimplificationPass());
+      pm3.add(new ErrorBBAnnotator());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
   case eSwitchTypeSimple: pm3.add(new LowerSwitchPass()); break;

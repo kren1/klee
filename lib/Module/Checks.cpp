@@ -218,3 +218,22 @@ bool DivFaultPass::runOnModule(Module &M) {
 
   return true;
 }
+
+char ErrorBBAnnotator::ID;
+
+
+bool ErrorBBAnnotator::runOnBasicBlock(llvm::BasicBlock &BB) {
+  LLVMContext &ctx = BB.getContext();
+  KleeIRMetaData md(ctx);
+  for(auto &I : BB) {
+      if(CallInst* ci = dyn_cast<CallInst>(&I)) {
+          if(ci->getCalledFunction() && ci->getCalledFunction()->hasName() 
+             && ci->getCalledFunction()->getName().startswith("klee_report_error")) {
+                 md.addAnnotation(BB.front(), "klee.error.block", "True");
+                 return true;
+             }
+      }
+
+  }
+  return false;
+}

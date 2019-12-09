@@ -196,6 +196,16 @@ private:
 
 };
 
+class ErrorBBAnnotator : public llvm::BasicBlockPass {
+
+public:
+  static char ID;
+  ErrorBBAnnotator() : llvm::BasicBlockPass(ID) {}
+  bool runOnBasicBlock(llvm::BasicBlock &M) override;
+
+};
+
+
 #ifdef USE_WORKAROUND_LLVM_PR39177
 /// WorkaroundLLVMPR39177Pass - Workaround for LLVM PR39177 within KLEE repo.
 /// For more information on this, please refer to the comments in

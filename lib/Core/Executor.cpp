@@ -51,6 +51,7 @@
 #include "klee/Solver/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
+#include "../Module/KLEEIRMetaData.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2768,20 +2769,45 @@ bool Executor::attemptToRevive(ExecutionState* current, Solver* fastSolver) {
 }
 
 void Executor::updateStates(ExecutionState *current) {
-//  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
-  bool is_klee_fun = current && current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
 
   if(attemptToRevive(current, fastSolver))  {
- //    errs() << ("current CEX cache HIT!\n") ;
-  } else if(!PendingKleeChecks && is_klee_fun && attemptToRevive(current, noCexSolver)) {
-//     errs() << ("current SOLVER stuff HIT!\n") ;
+//    errs() << ("current CEX cache HIT!\n") ;
+  } else if(!PendingKleeChecks 
+            && current 
+            && !current->pendingConstraint.isNull()
+            && (KleeIRMetaData::hasAnnotation(*current->pc->inst, "klee.error.block", "True")) 
+            ) {
+
+//            errs() << ("current is error block HIT!\n") ;
+            StatisticManager& sm = *theStatisticManager;
+            const InstructionInfo &ii = kmodule->infos->getInfo(*current->pc->inst);
+            unsigned index = ii.id;
+            auto executed = sm.getIndexedValue(*sm.getStatisticByName("Instructions"), index);
+//            errs() << "executed: "<<  executed << "\n";
+            if( executed == 0
+              && attemptToRevive(current, noCexSolver) ) {
+//              errs() << ("current SOLVER stuff HIT!\n") ;
+            }
   }
 
   for(ExecutionState* added : addedStates) {
       if(attemptToRevive(added, fastSolver)) {
 //          errs() << ("added CEX cache HIT!\n") ;
-      } else if(!PendingKleeChecks && is_klee_fun && attemptToRevive(added, noCexSolver)) {
-//          errs() << ("added SOLVER stuff HIT!\n") ;
+      } else if(!PendingKleeChecks 
+            && !added->pendingConstraint.isNull()
+            && (KleeIRMetaData::hasAnnotation(*added->pc->inst, "klee.error.block", "True")) 
+            ) {
+
+ //           errs() << ("added is error block HIT!\n") ;
+            StatisticManager& sm = *theStatisticManager;
+            const InstructionInfo &ii = kmodule->infos->getInfo(*added->pc->inst);
+            unsigned index = ii.id;
+            auto executed = sm.getIndexedValue(*sm.getStatisticByName("Instructions"), index);
+//            errs() << "executed: "<<  executed << "\n";
+            if( executed == 0
+              && attemptToRevive(added, noCexSolver) ) {
+//              errs() << ("added SOLVER stuff HIT!\n") ;
+            }
       }
   }
 
