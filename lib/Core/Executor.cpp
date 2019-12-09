@@ -2752,14 +2752,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 }
 
-bool Executor::attemptToRevive(ExecutionState* current) {
+bool Executor::attemptToRevive(ExecutionState* current, Solver* fastSolver) {
   bool solverResult = false;
   bool status;
   if(current && !current->pendingConstraint.isNull()) {
       Query qr(current->constraints, current->pendingConstraint);
       status = fastSolver->mayBeTrue(qr, solverResult);
       if(status && solverResult ) {  
-//          errs() << ("current CEX cache HIT!\n") ;
           addConstraint(*current, current->pendingConstraint);
           current->pendingConstraint = nullptr;
           return true;
@@ -2770,20 +2769,20 @@ bool Executor::attemptToRevive(ExecutionState* current) {
 
 void Executor::updateStates(ExecutionState *current) {
 //  assert(addedStates.size() < 2 && "Assuming for now only 1 added state");
-  Solver* tmp = fastSolver;
   bool is_klee_fun = current && current->stack.back().kf->function->hasName() && current->stack.back().kf->function->getName().startswith("klee_");
-  if(!PendingKleeChecks && is_klee_fun) {
-      fastSolver = noCexSolver;
-  }
 
-  attemptToRevive(current);
+  if(attemptToRevive(current, fastSolver))  {
+ //    errs() << ("current CEX cache HIT!\n") ;
+  } else if(!PendingKleeChecks && is_klee_fun && attemptToRevive(current, noCexSolver)) {
+//     errs() << ("current SOLVER stuff HIT!\n") ;
+  }
 
   for(ExecutionState* added : addedStates) {
-      attemptToRevive(added);
-  }
-
-  if(is_klee_fun) {
-      fastSolver = tmp;
+      if(attemptToRevive(added, fastSolver)) {
+//          errs() << ("added CEX cache HIT!\n") ;
+      } else if(!PendingKleeChecks && is_klee_fun && attemptToRevive(added, noCexSolver)) {
+//          errs() << ("added SOLVER stuff HIT!\n") ;
+      }
   }
 
   if (searcher) {
@@ -3673,7 +3672,7 @@ void Executor::executeMemoryOperation(ExecutionState &stateIn,
         StatePair inOutOfBoundState = fork(*state, check, true);
         assert(inOutOfBoundState.first && "We resolved to an object, so it must be maybeInBounds");
         if(inOutOfBoundState.first->pendingConstraint.isNull() 
-            || attemptToRevive(inOutOfBoundState.first)) {
+            || attemptToRevive(inOutOfBoundState.first, fastSolver)) {
             
             state = inOutOfBoundState.first;
         } else {
