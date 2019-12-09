@@ -16,6 +16,7 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
+#include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/SolverImpl.h"
@@ -39,10 +40,6 @@ cl::opt<bool>
                    cl::desc("Try substituting all counterexamples before "
                             "asking the SMT solver (default=false)"),
                    cl::cat(SolvingCat));
-cl::opt<bool>
-    CexCacheSeeds("cex-seeds", cl::init(false),
-                   cl::desc("Prepopulate cex cache"),
-                   cl::cat(SolvingCat));
 cl::opt<unsigned>
     CexClear("cex-clear", cl::init(0),
                    cl::desc("Clear cex cache after"),
@@ -55,6 +52,11 @@ cl::opt<bool>
                      cl::desc("Try substituting SAT superset counterexample "
                               "before asking the SMT solver (default=false)"),
                      cl::cat(SolvingCat));
+
+cl::list<std::string>
+  SeedOutFile("seed-file",
+              cl::desc(".ktest file to be used as CEX seed"));
+
 
 cl::opt<bool> CexCacheExperimental(
     "cex-cache-exp", cl::init(false),
@@ -98,38 +100,21 @@ class CexCachingSolver : public SolverImpl {
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
-   if(CexCacheSeeds) {
-   const Array* arr = cache->CreateArray("msg", 8);
-   std::vector<const Array*> objects = {arr};
-   std::vector< std::vector<unsigned char> > values = {{'g', 'o', 't','c','h','a','\0','b'}};
-   Assignment* binding = new Assignment (objects, values);
-   //assignmentsTable.insert(binding);
+      for (const auto& filename : SeedOutFile)  {
+          KTest *out = kTest_fromFile(filename.c_str());
+          if (!out) {
+            klee_error("unable to open: %s\n", filename.c_str());
+          }
+          std::vector<const Array*> objects;
+          std::vector< std::vector<unsigned char> > values;
+          for(int i = 0; i < out->numObjects; i++) {
+              KTestObject& obj = out->objects[i]; 
+              objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
+              values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
+              assignmentsTable.insert(new Assignment(objects, values));
+          }
+      }
 
-   std::vector< std::vector<unsigned char> > values1 = {{'h', 'e', 'l','l','o','j','j','j'}};
-   binding = new Assignment (objects, values1);
-   //assignmentsTable.insert(binding);
-   std::vector< std::vector<unsigned char> > values2 = {
-   {'S', 'E', 'L' ,'E','C','T',' ','*', ' ', 'F', 'R', 'O','M', ' ', 'a', ';', ' ', ' ', ' ', ' '},
-   {
-   0x03, 0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-   0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x00, 0x00, 'A' , '*' , 0x00, 0x00, 
-   0xe1, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xcf, 'Q' , 0x82, ']' , 0x00, 0x00, 0x00, 0x00,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, '+' , 'R' , 0x82, ']' , 0x00, 0x00, 0x00, 0x00,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, '+' , 'R' , 0x82, ']' , 0x00, 0x00, 0x00, 0x00,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-   },
-   {1,0,0,0}
-   };
-   binding = new Assignment (
-    {cache->CreateArray("stdin", 20), 
-     cache->CreateArray("stdin-stat", 144),
-     cache->CreateArray("model_version",4)}, values2);
-   assignmentsTable.insert(binding);
-
-    }
   }
   ~CexCachingSolver();
   
@@ -201,13 +186,16 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
            ie = assignmentsTable.end(); it != ie; ++it) {
       Assignment *a = *it;
- //     a->dump();
+   //   a->dump();
       if (a->satisfies(key.begin(), key.end())) {
-//        llvm::errs() << "Success!\n";
+   //     llvm::errs() << "Success!\n";
         result = a;
         return true;
       }
     }
+   // for(const auto& expr : key) expr->dump();
+   // llvm::errs() << "Fail!\n";
+
     if(CexClear > 0 && assignmentsTable.size() > CexClear) {
       llvm::errs() << "Clearing cex!\n";
 

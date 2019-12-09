@@ -255,7 +255,7 @@ namespace {
 
 
   cl::list<std::string>
-  SeedOutFile("seed-file",
+  SeedOutFile("no-use-seed-file",
               cl::desc(".ktest file to be used as seed"),
               cl::cat(SeedingCat));
 
