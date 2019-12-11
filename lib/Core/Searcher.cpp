@@ -450,6 +450,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
           exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
           basePendingSearcher->update(nullptr,{}, {&es});
+          size--; //This doesn't do delition, but it makes sense for reviving
           revived++;
  //         llvm::errs() << "success\n";
       } else {
