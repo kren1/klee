@@ -11,15 +11,20 @@
 
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprVisitorT.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 
-#include <map>
+#include <unordered_map>
 
 using namespace klee;
+
+//using ExprMap = std::unordered_map<const Expr*,ref<Expr>, constraints::ExprHash, constraints::ExprCmp>;
+using ExprMap = ExprHashMap<ref<Expr>>;
+
 
 namespace {
 llvm::cl::opt<bool> RewriteEqualities(
@@ -60,15 +65,14 @@ class ExprReplaceVisitor2 : public ExprVisitorT<ExprReplaceVisitor2> {
   typedef typename ExprVisitorT<ExprReplaceVisitor2>::ActionT Action;
 
 private:
-  const std::map< ref<Expr>, ref<Expr> > &replacements;
+  const ExprMap &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map<ref<Expr>, ref<Expr>> &_replacements)
+  ExprReplaceVisitor2(const ExprMap &_replacements)
       : ExprVisitorT(true, true), replacements(_replacements) {}
 
   Action visitExprPost(const Expr &e) {
-    std::map< ref<Expr>, ref<Expr> >::const_iterator it =
-      replacements.find(ref<Expr>(const_cast<Expr*>(&e)));
+    auto it = replacements.find(ref<Expr>(const_cast<Expr*>(&e)));
     if (it!=replacements.end()) {
       return Action::changeTo(it->second);
     } else {
@@ -106,21 +110,20 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
 
-  std::map< ref<Expr>, ref<Expr> > equalities;
+  ExprMap equalities;
+  ref<Expr> trueExpr = ConstantExpr::alloc(1, Expr::Bool);
   
   for (ConstraintManager::constraints_ty::const_iterator 
          it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
       if (isa<ConstantExpr>(ee->left)) {
-        equalities.insert(std::make_pair(ee->right,
+        equalities.insert(std::make_pair(ee->right.get(),
                                          ee->left));
       } else {
-        equalities.insert(std::make_pair(*it,
-                                         ConstantExpr::alloc(1, Expr::Bool)));
+        equalities.insert(std::make_pair(it->get(), trueExpr ));
       }
     } else {
-      equalities.insert(std::make_pair(*it,
-                                       ConstantExpr::alloc(1, Expr::Bool)));
+      equalities.insert(std::make_pair(it->get(), trueExpr ));
     }
   }
 
