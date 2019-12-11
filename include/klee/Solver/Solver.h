@@ -235,6 +235,7 @@ namespace klee {
   ///
   /// \param s - The underlying solver to use.
   Solver *createCexCachingSolver(Solver *s);
+  Solver *createROCexCachingSolver(Solver *s);
   Solver *createCexCachingSolver(Solver *s, ArrayCache*);
 
   /// createFastCexSolver - Create a "fast counterexample solver", which tries

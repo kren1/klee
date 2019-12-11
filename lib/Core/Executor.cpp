@@ -469,7 +469,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
-  this->noCexSolver = klee::createIndependentSolver(klee::createCachingSolver(coreSolver));
+  this->noWriteCexSolver = klee::createIndependentSolver(klee::createCachingSolver(klee::createROCexCachingSolver(coreSolver)));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
@@ -2785,7 +2785,7 @@ void Executor::updateStates(ExecutionState *current) {
             auto executed = sm.getIndexedValue(*sm.getStatisticByName("Instructions"), index);
 //            errs() << "executed: "<<  executed << "\n";
             if( executed == 0
-              && attemptToRevive(current, noCexSolver) ) {
+              && attemptToRevive(current, noWriteCexSolver) ) {
 //              errs() << ("current SOLVER stuff HIT!\n") ;
             }
   } /*else if(!PendingKleeChecks 
@@ -2813,7 +2813,7 @@ void Executor::updateStates(ExecutionState *current) {
             auto executed = sm.getIndexedValue(*sm.getStatisticByName("Instructions"), index);
 //            errs() << "executed: "<<  executed << "\n";
             if( executed == 0
-              && attemptToRevive(added, noCexSolver) ) {
+              && attemptToRevive(added, noWriteCexSolver) ) {
 //              errs() << ("added SOLVER stuff HIT!\n") ;
             }
       } /* else if(!PendingKleeChecks 
@@ -4081,7 +4081,9 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   std::vector<const Array*> objects;
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     objects.push_back(state.symbolics[i].second);
-  bool success = solver->getInitialValues(tmp, objects, values);
+  bool success = noWriteCexSolver->getInitialValues(Query(tmp.constraints,
+                                                          ConstantExpr::alloc(0, Expr::Bool))
+                                                    , objects, values);
   solver->setTimeout(time::Span());
   if (!success) {
     klee_warning("unable to compute initial values (invalid constraints?)!");

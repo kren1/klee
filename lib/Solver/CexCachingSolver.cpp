@@ -78,8 +78,10 @@ struct AssignmentLessThan {
 
 class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
+  friend Solver* klee::createROCexCachingSolver(Solver*);
 
   Solver *solver;
+  bool readOnlyCache = false;
   
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
@@ -282,11 +284,13 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
     binding = new Assignment(objects, values);
 
     // Memoize the result.
+    if(!readOnlyCache) {
     std::pair<assignmentsTable_ty::iterator, bool>
       res = assignmentsTable.insert(binding);
     if (!res.second) {
       delete binding;
       binding = *res.first;
+    }
     }
     
     if (DebugCexCacheCheckBinding)
@@ -433,4 +437,9 @@ Solver *klee::createCexCachingSolver(Solver *_solver) {
 }
 Solver *klee::createCexCachingSolver(Solver *_solver, ArrayCache *cache) {
   return new Solver(new CexCachingSolver(_solver,cache));
+}
+Solver *klee::createROCexCachingSolver(Solver *_solver) {
+  auto cex = new CexCachingSolver(_solver);
+  cex->readOnlyCache = true;
+  return new Solver(cex);
 }
