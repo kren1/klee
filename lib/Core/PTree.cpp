@@ -33,8 +33,8 @@ PTree::split(Node *n,
        currentNodeTag = node->parent->left.getPointer() == node
                                 ? node->parent->left.getInt()
                                 : node->parent->right.getInt();
-  n->left = PTreeNodePtr(new Node(n, leftData));
-  n->right = PTreeNodePtr(new Node(n, rightData), currentNodeTag);
+  n->left = PTreeNodePtr(new(alloc.Allocate()) Node(n, leftData));
+  n->right = PTreeNodePtr(new(alloc.Allocate()) Node(n, rightData), currentNodeTag);
   assert(n->left.getPointer() != n);
   assert(n->right.getPointer() != n);
   return std::make_pair(n->left.getPointer(), n->right.getPointer());
@@ -52,7 +52,9 @@ void PTree::remove(Node *n) {
         p->right = PTreeNodePtr(nullptr);
       }
     }
-    delete n;
+//    delete n;
+    n->~Node();
+    alloc.Deallocate(n);
     n = p;
   } while (n && !n->left.getPointer() && !n->right.getPointer());
 
@@ -77,7 +79,9 @@ void PTree::remove(Node *n) {
       }
     }
 
-    delete n;
+    n->~Node();
+    alloc.Deallocate(n);
+//    delete n;
   }
 }
 
