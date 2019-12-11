@@ -222,19 +222,43 @@ bool DivFaultPass::runOnModule(Module &M) {
 
 char ErrorBBAnnotator::ID;
 
-
-bool ErrorBBAnnotator::runOnBasicBlock(llvm::BasicBlock &BB) {
-  LLVMContext &ctx = BB.getContext();
+void ErrorBBAnnotator::getAnalysisUsage(AnalysisUsage &AU) const {
+     AU.setPreservesCFG();
+     AU.addRequired<PostDominatorTreeWrapperPass>();
+}
+bool ErrorBBAnnotator::runOnFunction(llvm::Function &F) {
+  LLVMContext &ctx = F.getContext();
   KleeIRMetaData md(ctx);
+	auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+  llvm::SmallPtrSet<BasicBlock*, 32> errorBBs;
+	for(auto &BB : F) {
   for(auto &I : BB) {
       if(CallInst* ci = dyn_cast<CallInst>(&I)) {
           if(ci->getCalledFunction() && ci->getCalledFunction()->hasName() 
              && ci->getCalledFunction()->getName().startswith("klee_report_error")) {
-                 md.addAnnotation(BB.front(), "klee.error.block", "True");
-                 return true;
+//                 return true;
+                errorBBs.insert(&BB);
+             } else if(false && ci->getCalledFunction() && ci->getCalledFunction()->hasName() 
+             && ci->getCalledFunction()->getName().startswith("sqlite3ErrorMsg")) {
+//                 md.addAnnotation(BB.front(), "klee.sqlerror.block", "True");
+                errorBBs.insert(&BB);
+                  
+                 
              }
+    
       }
 
   }
-  return false;
+	}
+  
+  for(auto BB : errorBBs) {
+      llvm::SmallVector<BasicBlock*, 32>  dominated;
+      PDT.getDescendants(BB, dominated);
+      if(dominated.size() > 1) errs() << "Multiple dominations!\n";
+      for(auto domBB : dominated) {
+          md.addAnnotation(domBB->front(), "klee.error.block", "True");
+      }
+
+  }
+  return true;
 }

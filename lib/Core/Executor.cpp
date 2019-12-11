@@ -2788,7 +2788,15 @@ void Executor::updateStates(ExecutionState *current) {
               && attemptToRevive(current, noCexSolver) ) {
 //              errs() << ("current SOLVER stuff HIT!\n") ;
             }
-  }
+  } /*else if(!PendingKleeChecks 
+            && current 
+            && !current->pendingConstraint.isNull() ) {
+      errs() << current->stack.back().kf->function->getName() << "\n";
+      current->prevPC->inst->dump();
+      if(KleeIRMetaData::hasAnnotation(*current->pc->inst, "klee.sqlerror.block", "True")) {
+          errs() << "!!!!!!!! ===== ERROR BLOCK ========== !!!!!!!!\n";
+      }
+  }  */
 
   for(ExecutionState* added : addedStates) {
       if(attemptToRevive(added, fastSolver)) {
@@ -2808,7 +2816,15 @@ void Executor::updateStates(ExecutionState *current) {
               && attemptToRevive(added, noCexSolver) ) {
 //              errs() << ("added SOLVER stuff HIT!\n") ;
             }
+      } /* else if(!PendingKleeChecks 
+            && current 
+            && !current->pendingConstraint.isNull() ) {
+      errs() << current->stack.back().kf->function->getName() << "\n";
+      current->prevPC->inst->dump();
+      if(KleeIRMetaData::hasAnnotation(*current->pc->inst, "klee.sqlerror.block", "True")) {
+          errs() << "!!!!!!!! ===== ERROR BLOCK ========== !!!!!!!!\n";
       }
+  } */
   }
 
   if (searcher) {

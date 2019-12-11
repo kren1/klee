@@ -196,12 +196,13 @@ private:
 
 };
 
-class ErrorBBAnnotator : public llvm::BasicBlockPass {
+class ErrorBBAnnotator : public llvm::FunctionPass {
 
 public:
   static char ID;
-  ErrorBBAnnotator() : llvm::BasicBlockPass(ID) {}
-  bool runOnBasicBlock(llvm::BasicBlock &M) override;
+  ErrorBBAnnotator() : llvm::FunctionPass(ID) {}
+  bool runOnFunction(llvm::Function &M) override;
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 };
 

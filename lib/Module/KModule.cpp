@@ -30,6 +30,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
@@ -289,7 +290,8 @@ void KModule::optimiseAndPrepare(
   // directly I think?
   legacy::PassManager pm3;
   pm3.add(createCFGSimplificationPass());
-      pm3.add(new ErrorBBAnnotator());
+  pm3.add(createPostDomTree());
+  pm3.add(new ErrorBBAnnotator());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
   case eSwitchTypeSimple: pm3.add(new LowerSwitchPass()); break;
