@@ -24,6 +24,7 @@
 
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
@@ -36,6 +37,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -93,6 +95,49 @@ static inline void addPass(legacy::PassManager &PM, Pass *P) {
   // If we are verifying all of the intermediate steps, add the verifier...
   if (VerifyEach)
     PM.add(createVerifierPass());
+}
+class NamedInlinerPass : public LegacyInlinerBase {
+ 
+ public:
+   NamedInlinerPass() : LegacyInlinerBase(ID, /*InsertLifetime*/ true) {
+  //   initializeNamedInlinerPassPass(*PassRegistry::getPassRegistry());
+   }
+ 
+ 
+   /// Main run interface method.  We override here to avoid calling skipSCC().
+   bool runOnSCC(CallGraphSCC &SCC) override { return inlineCalls(SCC); }
+ 
+   static char ID; // Pass identification, replacement for typeid
+ 
+   InlineCost getInlineCost(CallSite CS) override;
+ 
+   using llvm::Pass::doFinalization;
+   bool doFinalization(CallGraph &CG) override {
+     return removeDeadFunctions(CG, /*AlwaysInlineOnly=*/true);
+   }
+};
+char NamedInlinerPass::ID = 0;
+InlineCost NamedInlinerPass::getInlineCost(CallSite CS) {
+   Function *Callee = CS.getCalledFunction();
+ 
+   // Only inline direct calls to functions with always-inline attributes
+   // that are viable for inlining.
+   if (!Callee)
+     return InlineCost::getNever();
+ 
+   // FIXME: We shouldn't even get here for declarations.
+   if (Callee->isDeclaration())
+     return InlineCost::getNever();
+ 
+ 
+   auto IsViable = isInlineViable(*Callee);
+   if (!IsViable)
+     return InlineCost::getNever();
+ 
+   if (Callee->hasName() && Callee->getName().endswith("etToken"))
+	   return InlineCost::getAlways();
+
+	 return InlineCost::getNever();
 }
 
 namespace llvm {
@@ -182,6 +227,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
 
   // DWD - Run the opt standard pass list as well.
   addPass(Passes, createAlwaysInlinerLegacyPass());
+  //addPass(Passes, new NamedInlinerPass());
   AddStandardCompilePasses(Passes);
 
   // Now that composite has been compiled, scan through the module, looking
