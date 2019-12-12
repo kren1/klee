@@ -27,6 +27,9 @@
 
 using namespace klee;
 
+SQLIntStatistic oneRefEntries("CacheOneRefEntries", "COneR");
+SQLIntStatistic oneConstraintOneRefEntries("CacheOneConstraintRefEntries", "COneCR");
+SQLIntStatistic cacheSize("BranchCacheSize", "BCachS");
 class CachingSolver : public SolverImpl {
 private:
   ref<Expr> canonicalizeQuery(ref<Expr> originalQuery,
@@ -76,6 +79,39 @@ public:
   CachingSolver(Solver *s) : solver(s) {}
   ~CachingSolver() { cache.clear(); delete solver; }
 
+  static bool check;
+  void countRefCounts() {
+      static int prevOneRef = 0;
+      static int prevSize = 0;
+      static int prevoneConstraintOneRef = 0;
+      if(!check) return;
+      int oneRefs = 0;
+      int oneConstraintOneRef = 0;
+      for(auto& e : cache) {
+          auto& entry = e.first;
+          int cnt = entry.query->refCount;
+          bool allOneRefs =  cnt == 1;
+          bool oneOneRef = false;
+          for(const auto& constraint : entry.constraints) {
+              cnt = constraint->refCount;
+              allOneRefs &= cnt == 1;
+              oneOneRef |= cnt == 1;
+          }
+          cnt = entry.query->refCount;
+          if(allOneRefs) oneRefs++;
+          if(cnt == 1 && oneOneRef) oneConstraintOneRef++;
+
+      }
+      oneRefEntries += oneRefs - prevOneRef;
+      oneConstraintOneRefEntries += oneConstraintOneRef - prevoneConstraintOneRef;
+      cacheSize += cache.size() - prevSize;
+  //   llvm::errs() << "============ One refs: " << oneRefs << " cache size: " << cache.size() <<  "\n";
+      prevOneRef = oneRefs;
+      prevSize = cache.size();
+      prevoneConstraintOneRef = oneConstraintOneRef;
+      check = false;
+  }
+
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query& query, ref<Expr> &result) {
@@ -95,6 +131,7 @@ public:
   void setCoreSolverTimeout(time::Span timeout);
 };
 
+bool CachingSolver::check = false;
 /** @returns the canonical version of the given query.  The reference
     negationUsed is set to true if the original query was negated in
     the canonicalization process. */
@@ -118,6 +155,7 @@ bool CachingSolver::cacheLookup(const Query& query,
                                 IncompleteSolver::PartialValidity &result) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
+  countRefCounts();
 
   CacheEntry ce(query.constraints, canonicalQuery);
   cache_map::iterator it = cache.find(ce);

@@ -498,7 +498,11 @@ time::Span StatsTracker::elapsed() {
   return time::getWallTime() - startWallTime;
 }
 
+struct CachingSolver {
+    static bool check;
+};
 void StatsTracker::writeStatsLine() {
+  CachingSolver::check = true;
 
   sqlite3_bind_int64(insertStmt, 1, fullBranches);
   sqlite3_bind_int64(insertStmt, 2, partialBranches);
