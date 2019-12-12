@@ -91,6 +91,8 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 
 class Expr {
 public:
+  class CachingSolver;
+  friend CachingSolver;
   static unsigned count;
   static const unsigned MAGIC_HASH_CONSTANT = 39;
 
