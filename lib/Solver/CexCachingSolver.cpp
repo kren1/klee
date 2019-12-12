@@ -36,7 +36,7 @@ cl::opt<bool> DebugCexCacheCheckBinding(
     cl::cat(SolvingCat));
 
 cl::opt<bool>
-    CexCacheTryAll("cex-cache-try-all", cl::init(true),
+    CexCacheTryAll("cex-cache-try-all", cl::init(false),
                    cl::desc("Try substituting all counterexamples before "
                             "asking the SMT solver (default=false)"),
                    cl::cat(SolvingCat));
@@ -82,8 +82,9 @@ class CexCachingSolver : public SolverImpl {
 
   Solver *solver;
   bool readOnlyCache = false;
+  bool pendingCache = false;
   
-  MapOfSets<ref<Expr>, Assignment*> cache;
+  static MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
   static assignmentsTable_ty assignmentsTable;
 
@@ -101,7 +102,7 @@ class CexCachingSolver : public SolverImpl {
   
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
-  CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
+  CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver), pendingCache(true) {
       for (const auto& filename : SeedOutFile)  {
           KTest *out = kTest_fromFile(filename.c_str());
           if (!out) {
@@ -113,8 +114,11 @@ public:
               KTestObject& obj = out->objects[i]; 
               objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
               values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
-              assignmentsTable.insert(new Assignment(objects, values));
           }
+          auto a = new Assignment(objects, values);
+          KeyType key;
+          assignmentsTable.insert(a);
+          CexCachingSolver::cache.insert(key, a);
       }
 
   }
@@ -192,6 +196,26 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       if (a->satisfies(key.begin(), key.end())) {
    //     llvm::errs() << "Success!\n";
         result = a;
+        if(false && true) {
+            std::vector<std::pair<std::set<ref<Expr>>, Assignment*>> subsets;
+            cache.subsets(key, subsets);
+            bool foundTheRightAssigment = false;
+            for(auto setAssigment : subsets) {
+                //foundTheRightAssigment |= setAssigment.second == a;
+                bool isSat = setAssigment.second->satisfies(key.begin(), key.end());
+                if(isSat != (setAssigment.second == a)) {
+                    llvm::errs() << setAssigment.second << " !=? " << a << "\n";
+                }
+                foundTheRightAssigment |= isSat;
+            }
+            int size = 0;
+            for(auto& _ : cache) size++;
+            llvm::errs() << "cache size: " << size;
+            llvm::errs() << " Table size: " << assignmentsTable.size() << " subset size: " << subsets.size() ;
+            if(foundTheRightAssigment) llvm::errs() << " Found in subset!\n";
+            else llvm::errs() << " Not found in subset!\n";
+
+        }
         return true;
       }
     }
@@ -208,26 +232,39 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       assignmentsTable.clear();
     }
   } else {
-    // FIXME: Which order? one is sure to be better.
+    if(pendingCache) {
+        std::vector<std::pair<std::set<ref<Expr>>, Assignment*>> subsets;
+        cache.subsets(key, subsets);
+        for(auto setAssigment : subsets) {
+            auto a = setAssigment.second;
+            if(a && a->satisfies(key.begin(), key.end())) {
+              result = a;
+              return true;
+            }
+        }
+         
+    } else {
+        // FIXME: Which order? one is sure to be better.
 
-    // Look for a satisfying assignment for a superset, which is trivially an
-    // assignment for any subset.
-    Assignment **lookup = 0;
-    if (CexCacheSuperSet)
-      lookup = cache.findSuperset(key, NonNullAssignment());
+        // Look for a satisfying assignment for a superset, which is trivially an
+        // assignment for any subset.
+        Assignment **lookup = 0;
+        if (CexCacheSuperSet)
+          lookup = cache.findSuperset(key, NonNullAssignment());
 
-    // Otherwise, look for a subset which is unsatisfiable -- if the subset is
-    // unsatisfiable then no additional constraints can produce a valid
-    // assignment. While searching subsets, we also explicitly the solutions for
-    // satisfiable subsets to see if they solve the current query and return
-    // them if so. This is cheap and frequently succeeds.
-    if (!lookup) 
-      lookup = cache.findSubset(key, NullOrSatisfyingAssignment(key));
+        // Otherwise, look for a subset which is unsatisfiable -- if the subset is
+        // unsatisfiable then no additional constraints can produce a valid
+        // assignment. While searching subsets, we also explicitly the solutions for
+        // satisfiable subsets to see if they solve the current query and return
+        // them if so. This is cheap and frequently succeeds.
+        if (!lookup) 
+          lookup = cache.findSubset(key, NullOrSatisfyingAssignment(key));
 
-    // If either lookup succeeded, then we have a cached solution.
-    if (lookup) {
-      result = *lookup;
-      return true;
+        // If either lookup succeeded, then we have a cached solution.
+        if (lookup) {
+          result = *lookup;
+          return true;
+        }
     }
   }
   
@@ -312,6 +349,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 ///
 
 CexCachingSolver::assignmentsTable_ty CexCachingSolver::assignmentsTable;
+MapOfSets<ref<Expr>, Assignment*> CexCachingSolver::cache;
 CexCachingSolver::~CexCachingSolver() {
   cache.clear();
   delete solver;
