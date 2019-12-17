@@ -55,6 +55,13 @@ cl::opt<std::string> MaxReviveTime(
     cl::desc("Maximum time to spend reviving states (default unlimited)")
     );
 
+cl::opt<bool> RandomPendingDelition(
+    "random-pending-deletion",
+    cl::init(false),
+    cl::desc("If enabled don't try to revive states for deleition (default=false)")
+    );
+
+
 
 Searcher::~Searcher() {
 }
@@ -431,6 +438,15 @@ PendingSearcher::~PendingSearcher() {
 
 
 std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
+    if(RandomPendingDelition) { 
+        auto ret = basePendingSearcher->selectForDelition(size);
+        if(size - ret.size() > 0) {
+            auto normalDeletes = baseNormalSearcher->selectForDelition(size - ret.size());
+            ret.insert(ret.end(), normalDeletes.begin(), normalDeletes.end());
+        }
+        return ret;
+
+    }
     errs() << "Deliting " << size << " states\n";
     int revived = 0, killed = 0;
  
