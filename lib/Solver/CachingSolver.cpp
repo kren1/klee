@@ -89,15 +89,15 @@ public:
       int oneConstraintOneRef = 0;
       for(auto& e : cache) {
           auto& entry = e.first;
-          int cnt = entry.query->refCount;
+          int cnt = entry.query->_refCount.refCount;
           bool allOneRefs =  cnt == 1;
           bool oneOneRef = false;
           for(const auto& constraint : entry.constraints) {
-              cnt = constraint->refCount;
+              cnt = constraint->_refCount.refCount;
               allOneRefs &= cnt == 1;
               oneOneRef |= cnt == 1;
           }
-          cnt = entry.query->refCount;
+          cnt = entry.query->_refCount.refCount;
           if(allOneRefs) oneRefs++;
           if(cnt == 1 && oneOneRef) oneConstraintOneRef++;
 

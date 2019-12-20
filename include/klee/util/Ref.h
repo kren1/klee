@@ -50,13 +50,14 @@ class ref;
 
 /// Reference counter to be used as part of a ref-managed struct or class
 class ReferenceCounter {
+class CachingSolver;
   template<class T>
   friend class ref;
 
   /// Count how often the object has been referenced.
-  unsigned refCount = 0;
 
 public:
+  unsigned refCount = 0;
   ReferenceCounter() = default;
   ~ReferenceCounter() = default;
 
