@@ -12,6 +12,7 @@
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
+#include "klee/util/WeakRef.h"
 #include "klee/Solver/IncompleteSolver.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
@@ -42,25 +43,31 @@ private:
                    IncompleteSolver::PartialValidity &result);
   
   struct CacheEntry {
-    CacheEntry(const ConstraintManager &c, ref<Expr> q)
-      : constraints(c), query(q) {}
+    std::vector<weak_ref<Expr>> key;
+    CacheEntry(const ConstraintManager &c, ref<Expr> &q) {
+        assert(q.get());
+        key.emplace_back(q.get());
+        for(const auto& con: c) {
+            assert(con.get());
+            key.emplace_back(con.get());
+        }
+    }
+
 
     CacheEntry(const CacheEntry &ce)
-      : constraints(ce.constraints), query(ce.query) {}
+      : key(ce.key) {}
     
-    ConstraintManager constraints;
-    ref<Expr> query;
 
     bool operator==(const CacheEntry &b) const {
-      return constraints==b.constraints && *query.get()==*b.query.get();
+      return key == b.key;
     }
   };
 
   struct CacheEntryHash {
     unsigned operator()(const CacheEntry &ce) const {
-      unsigned result = ce.query->hash();
+      unsigned result = 0;
 
-      for (auto const &constraint : ce.constraints) {
+      for (auto const &constraint : ce.key) {
         result ^= constraint->hash();
       }
 
@@ -89,26 +96,28 @@ public:
       int oneConstraintOneRef = 0;
       for(auto& e : cache) {
           auto& entry = e.first;
-          int cnt = entry.query->_refCount.refCount;
-          bool allOneRefs =  cnt == 1;
-          bool oneOneRef = false;
-          for(const auto& constraint : entry.constraints) {
-              cnt = constraint->_refCount.refCount;
-              allOneRefs &= cnt == 1;
-              oneOneRef |= cnt == 1;
+          assert(entry.key.size() > 0);
+          bool allZeroRefs =  true;
+          bool oneZeroRef = false;
+          for(const auto& constraint : entry.key) {
+              int cnt = constraint->_refCount.refCount;
+              if(cnt == 0) { 
+//                  llvm::errs() << "\tZero strong refs, weak refs: " << constraint->_refCount.weakrefCount << "\n";
+              }
+              allZeroRefs &= cnt == 0;
+              oneZeroRef |= cnt == 0;
           }
-          cnt = entry.query->_refCount.refCount;
-          if(allOneRefs) oneRefs++;
-          if(cnt == 1 && oneOneRef) oneConstraintOneRef++;
+          if(allZeroRefs) oneRefs++;
+          if(oneZeroRef) oneConstraintOneRef++;
 
       }
       oneRefEntries += oneRefs - prevOneRef;
       oneConstraintOneRefEntries += oneConstraintOneRef - prevoneConstraintOneRef;
       cacheSize += cache.size() - prevSize;
-  //   llvm::errs() << "============ One refs: " << oneRefs << " cache size: " << cache.size() <<  "\n";
+      llvm::errs() << "============ One refs: " << oneRefs << " oneConstraintZeroRef: " << oneConstraintOneRef <<  " cache size: " << cache.size() <<  "\n";
       prevOneRef = oneRefs;
-      prevSize = cache.size();
       prevoneConstraintOneRef = oneConstraintOneRef;
+      prevSize = cache.size();
       check = false;
   }
 

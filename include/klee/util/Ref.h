@@ -58,6 +58,7 @@ class CachingSolver;
 
 public:
   unsigned refCount = 0;
+  unsigned weakrefCount = 0;
   ReferenceCounter() = default;
   ~ReferenceCounter() = default;
 
@@ -101,7 +102,7 @@ private:
   }
 
   void dec() const {
-    if (ptr && --ptr->_refCount.refCount == 0)
+    if (ptr && --ptr->_refCount.refCount == 0 && ptr->_refCount.weakrefCount == 0)
       delete ptr;
   }
 
