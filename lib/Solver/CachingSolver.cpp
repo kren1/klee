@@ -17,6 +17,8 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 
+#include "llvm/Support/CommandLine.h"
+
 #include <unordered_map>
 #define unordered_map std::unordered_map
 //#include <ciso646>
@@ -28,6 +30,11 @@
 //#endif
 
 using namespace klee;
+  llvm::cl::opt<unsigned> CacheSize(
+    "cache-size", llvm::cl::init(100),
+    llvm::cl::desc("Size of cache (default=100)"));
+
+
 
 SQLIntStatistic oneRefEntries("CacheOneRefEntries", "COneR");
 SQLIntStatistic oneConstraintOneRefEntries("CacheOneConstraintRefEntries", "COneCR");
@@ -98,7 +105,7 @@ private:
   cache_map cache;
 
 public:
-  CachingSolver(Solver *s) : solver(s) { cache.reserve(100);}
+  CachingSolver(Solver *s) : solver(s) { cache.reserve(CacheSize);}
   ~CachingSolver() { cache.clear(); delete solver; }
 
   static bool check;
@@ -202,7 +209,7 @@ void CachingSolver::cacheInsert(const Query& query,
                                 IncompleteSolver::PartialValidity result) {
   if(cache.load_factor() > 0.95*cache.max_load_factor()) {
 //      llvm::errs() << "Rehashing!\n";
-      cache = cache_map(cache.begin(), cache.end());
+      cache = cache_map(cache.begin(), cache.end(), cache.bucket_count()*2);
   }
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
