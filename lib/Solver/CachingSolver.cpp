@@ -189,7 +189,7 @@ bool CachingSolver::cacheLookup(const Query& query,
                                 IncompleteSolver::PartialValidity &result) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
-  countRefCounts();
+//  countRefCounts();
 
   CacheEntry ce(query.constraints, canonicalQuery);
   cache_map::iterator it = cache.find(ce);
@@ -209,7 +209,7 @@ void CachingSolver::cacheInsert(const Query& query,
                                 IncompleteSolver::PartialValidity result) {
   if(cache.load_factor() > 0.95*cache.max_load_factor()) {
 //      llvm::errs() << "Rehashing!\n";
-      cache = cache_map(cache.begin(), cache.end(), cache.bucket_count()*2);
+      cache = cache_map(cache.begin(), cache.end(), cache.bucket_count());
   }
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
