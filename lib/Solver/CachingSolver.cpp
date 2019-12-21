@@ -17,14 +17,15 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 
-#include <ciso646>
-#ifdef _LIBCPP_VERSION
 #include <unordered_map>
 #define unordered_map std::unordered_map
-#else
-#include <tr1/unordered_map>
-#define unordered_map std::tr1::unordered_map
-#endif
+//#include <ciso646>
+//#ifdef _LIBCPP_VERSION
+//#define unordered_map std::unordered_map
+//#else
+//#include <tr1/unordered_map>
+//#define unordered_map std::tr1::unordered_map
+//#endif
 
 using namespace klee;
 
@@ -59,6 +60,19 @@ private:
     
 
     bool operator==(const CacheEntry &b) const {
+      bool isNull = false;
+      for(auto& e : key) {
+          if(e.isNull()) {
+              isNull = true;
+              break;
+          }
+      }
+      if(isNull) {
+          for(auto& e : b.key) {
+              if(e.isNull()) return true;
+          }
+      }
+      if(isNull) return false;
       return key == b.key;
     }
   };
@@ -68,6 +82,7 @@ private:
       unsigned result = 0;
 
       for (auto const &constraint : ce.key) {
+        if(constraint.isNull()) return 0;
         result ^= constraint->hash();
       }
 
@@ -83,11 +98,12 @@ private:
   cache_map cache;
 
 public:
-  CachingSolver(Solver *s) : solver(s) {}
+  CachingSolver(Solver *s) : solver(s) { cache.reserve(100);}
   ~CachingSolver() { cache.clear(); delete solver; }
 
   static bool check;
   void countRefCounts() {
+
       static int prevOneRef = 0;
       static int prevSize = 0;
       static int prevoneConstraintOneRef = 0;
@@ -100,7 +116,8 @@ public:
           bool allZeroRefs =  true;
           bool oneZeroRef = false;
           for(const auto& constraint : entry.key) {
-              int cnt = constraint->_refCount.refCount;
+
+              int cnt = constraint.isNull() ? 0 : constraint->_refCount.refCount;
               if(cnt == 0) { 
 //                  llvm::errs() << "\tZero strong refs, weak refs: " << constraint->_refCount.weakrefCount << "\n";
               }
@@ -115,6 +132,7 @@ public:
       oneConstraintOneRefEntries += oneConstraintOneRef - prevoneConstraintOneRef;
       cacheSize += cache.size() - prevSize;
       llvm::errs() << "============ One refs: " << oneRefs << " oneConstraintZeroRef: " << oneConstraintOneRef <<  " cache size: " << cache.size() <<  "\n";
+      llvm::errs() << "load factor: " << cache.load_factor() << " max_load factor: " << cache.max_load_factor() << " max size: " << cache.max_size() <<  "\n";
       prevOneRef = oneRefs;
       prevoneConstraintOneRef = oneConstraintOneRef;
       prevSize = cache.size();
@@ -182,6 +200,10 @@ bool CachingSolver::cacheLookup(const Query& query,
 /// Inserts the given query, result pair into the cache.
 void CachingSolver::cacheInsert(const Query& query,
                                 IncompleteSolver::PartialValidity result) {
+  if(cache.load_factor() > 0.95*cache.max_load_factor()) {
+//      llvm::errs() << "Rehashing!\n";
+      cache = cache_map(cache.begin(), cache.end());
+  }
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
 

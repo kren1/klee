@@ -33,7 +33,7 @@
 namespace klee {
 template<class T>
 class weak_ref {
-  T *ptr;
+  mutable T *ptr;
 
 public:
   // default constructor: create a NULL weak_reference
@@ -51,6 +51,12 @@ private:
       delete ptr;
   }
 
+  void weak_dec() const {
+    if(ptr && ptr->_refCount.refCount == 0) {
+        dec();
+        ptr = nullptr;
+    }
+  }
 public:
   template<class U> friend class weak_ref;
 
@@ -80,6 +86,7 @@ public:
 
   // pointer operations
   T *get () const {
+    weak_dec();
     return ptr;
   }
 
@@ -150,12 +157,19 @@ public:
     return ptr;
   }
 
-  bool isNull() const { return ptr == nullptr; }
+  bool isNull() const { weak_dec(); return ptr == nullptr; }
 
   // assumes non-null arguments
   int compare(const weak_ref &rhs) const {
-    assert(!isNull() && !rhs.isNull() && "Invalid call to compare()");
-    return get()->compare(*rhs.get());
+    if(!isNull() && !rhs.isNull()) {
+      return get()->compare(*rhs.get());
+    } else if(isNull() && rhs.isNull()) {
+        return -1;
+    } else if(isNull()) {
+        return -1;
+    } else {
+        return 1;
+    }
   }
 
   // assumes non-null arguments
