@@ -191,7 +191,7 @@ bool CachingSolver::cacheLookup(const Query& query,
                                 IncompleteSolver::PartialValidity &result) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
-//  countRefCounts();
+  countRefCounts();
 
   CacheEntry ce(query.constraints, canonicalQuery);
   cache_map::iterator it = cache.find(ce);
