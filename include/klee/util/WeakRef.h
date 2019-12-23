@@ -86,7 +86,7 @@ public:
 
   // pointer operations
   T *get () const {
-    weak_dec();
+//    weak_dec();
     return ptr;
   }
 
@@ -157,7 +157,8 @@ public:
     return ptr;
   }
 
-  bool isNull() const { weak_dec(); return ptr == nullptr; }
+  bool isNull() const {  return ptr == nullptr; }
+  bool isOnlyWeak() const { return ptr->_refCount.refCount == 0; }
 
   // assumes non-null arguments
   int compare(const weak_ref &rhs) const {

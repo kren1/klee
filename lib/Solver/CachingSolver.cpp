@@ -67,29 +67,31 @@ private:
     
 
     bool operator==(const CacheEntry &b) const {
-      bool isNull = false;
+      bool isOnlyWeak = true;
       for(auto& e : key) {
-          if(e.isNull()) {
-              isNull = true;
-              break;
-          }
+          isOnlyWeak &= e.isOnlyWeak();
       }
-      if(isNull) {
+      if(isOnlyWeak) {
           for(auto& e : b.key) {
-              if(e.isNull()) return true;
+              if(!e.isOnlyWeak()) return false;
           }
+          return true;
       }
-      if(isNull) return false;
       return key == b.key;
     }
   };
 
   struct CacheEntryHash {
     unsigned operator()(const CacheEntry &ce) const {
+      bool onlyWeak = true;
+      for (auto const &constraint : ce.key) {
+          onlyWeak &= constraint.isOnlyWeak();
+      }
+      if(onlyWeak) return 0;
+
       unsigned result = 0;
 
       for (auto const &constraint : ce.key) {
-        if(constraint.isNull()) return 0;
         result ^= constraint->hash();
       }
 
