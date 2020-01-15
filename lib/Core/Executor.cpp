@@ -86,6 +86,7 @@ using namespace llvm;
 using namespace klee;
 
 namespace klee {
+extern ArrayCache* acTransfer;
 cl::OptionCategory DebugCat("Debugging options",
                             "These are debugging options.");
 
@@ -456,6 +457,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   if (!coreSolver) {
     klee_error("Failed to create core solver\n");
   }
+
+  acTransfer = &arrayCache;
 
   Solver *solver = constructSolverChain(
       coreSolver,

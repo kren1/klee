@@ -65,7 +65,9 @@
 
 using namespace llvm;
 using namespace klee;
-
+namespace klee {
+extern cl::list<std::string> SeedOutFile;
+}
 namespace {
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
@@ -254,10 +256,6 @@ namespace {
 
 
 
-  cl::list<std::string>
-  SeedOutFile("seed-file",
-              cl::desc(".ktest file to be used as seed"),
-              cl::cat(SeedingCat));
 
   cl::list<std::string>
   SeedOutDir("seed-dir",

@@ -17,9 +17,11 @@
 #include "klee/Solver/SolverCmdLine.h"
 
 #include "llvm/Support/raw_ostream.h"
+#include "klee/Expr/ArrayCache.h"
 
 
 namespace klee {
+ArrayCache* acTransfer;
 Solver *constructSolverChain(Solver *coreSolver,
                              std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
@@ -47,7 +49,7 @@ Solver *constructSolverChain(Solver *coreSolver,
     solver = createFastCexSolver(solver);
 
   if (UseCexCache)
-    solver = createCexCachingSolver(solver);
+    solver = createCexCachingSolver(solver, acTransfer);
 
   if (UseBranchCache)
     solver = createCachingSolver(solver);

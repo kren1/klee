@@ -9,12 +9,14 @@
 
 #include "klee/Solver/Solver.h"
 
+#include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
+#include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/SolverImpl.h"
@@ -25,7 +27,14 @@
 
 using namespace klee;
 using namespace llvm;
-
+  
+  
+  
+namespace klee {  
+cl::list<std::string>
+SeedOutFile("seed-file",
+            cl::desc(".ktest file to be used as seed"));
+}
 namespace {
 cl::opt<bool> DebugCexCacheCheckBinding(
     "debug-cex-cache-check-binding", cl::init(false),
@@ -48,6 +57,11 @@ cl::opt<bool>
 cl::opt<bool> CexCacheExperimental(
     "cex-cache-exp", cl::init(false),
     cl::desc("Optimization for validity queries (default=false)"),
+    cl::cat(SolvingCat));
+
+cl::opt<bool> CexCacheSeed(
+    "cex-cache-seed", cl::init(false),
+    cl::desc("Populate the cex cache (default = false)"),
     cl::cat(SolvingCat));
 
 } // namespace
@@ -86,6 +100,23 @@ class CexCachingSolver : public SolverImpl {
   
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
+  CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver) {
+			if(!CexCacheSeed) return;
+	  	for (const auto& filename : SeedOutFile)  {
+          KTest *out = kTest_fromFile(filename.c_str());
+          if (!out) {
+            klee_error("unable to open: %s\n", filename.c_str());
+          }
+          std::vector<const Array*> objects;
+          std::vector< std::vector<unsigned char> > values;
+          for(int i = 0; i < out->numObjects; i++) {
+              KTestObject& obj = out->objects[i]; 
+              objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
+              values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
+              assignmentsTable.insert(new Assignment(objects, values));
+          }
+      }     
+  }
   ~CexCachingSolver();
   
   bool computeTruth(const Query&, bool &isValid);
@@ -382,7 +413,9 @@ void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
 }
 
 ///
-
 Solver *klee::createCexCachingSolver(Solver *_solver) {
   return new Solver(new CexCachingSolver(_solver));
+}
+Solver *klee::createCexCachingSolver(Solver *_solver, ArrayCache * acTransfer) {
+  return new Solver(new CexCachingSolver(_solver, acTransfer));
 }
