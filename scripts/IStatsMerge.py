@@ -65,12 +65,15 @@ def merge(inputs, output, outputDir):
                 raise MergeError("headers differ")
             output.write('ob=%s\n'%(os.path.join(outputDir,'assembly.ll'),))
             break
+        elif  ln.startswith('pid:'):
+          continue
         else:
             if ln.startswith('positions:'):
                 if ln!='positions: instr line\n':
                     raise MergeError("unexpected 'positions' directive")
             elif ln.startswith('events:'):
                 events = ln[len('events: '):].strip().split(' ')
+            print(lns)
             if not allEqual(lns):
                 raise MergeError("headers differ")
             output.write(ln)
@@ -133,7 +136,10 @@ def merge(inputs, output, outputDir):
     while 1:
         lns = getLines()
         ln = lns[0]
-        if ln is None:
+        #print(lns, "ha")
+        if any([e == "\n" for e in lns]):
+            continue
+        elif ln is None:
             if not allEqual(lns):
                 raise MergeError("unexpected end of input")
             break
