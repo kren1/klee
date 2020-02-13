@@ -11,7 +11,7 @@
 
 from __future__ import division
 
-import sys, os
+import sys, os, re
 
 class MergeError(Exception):
     pass
@@ -19,13 +19,14 @@ class MergeError(Exception):
 def checkAssemblies(directories):
     def read(d):
         try:
-            return open(os.path.join(d,'assembly.ll')).read()
+            return open(os.path.join(d,'assembly.ll')).readlines()
         except:
             raise MergeError("unable to open assembly for: %s"%(`d`,))
     
     reference = read(directories[0])
     for d in directories[1:]:
-        if reference != read(d):
+        for rl, dl in zip(reference, read(d)):
+          if re.sub(", ![^\n]*","\n",rl).strip() != re.sub(", ![^\n]*","",dl).strip():
             return False
     return True
 
