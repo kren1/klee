@@ -24,6 +24,8 @@
 #include "klee/OptionCategories.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Statistics.h"
+#include "../../lib/Module/Passes.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -120,6 +122,13 @@ namespace {
   WriteSymPaths("write-sym-paths",
                 cl::desc("Write .sym.path files for each test case (default=false)"),
                 cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  InjectFaults("inject-fault",
+               cl::desc("Injects div by zeor faults"),
+               cl::init(false));
+
+
 
 
   /*** Startup options ***/
@@ -1237,6 +1246,12 @@ int main(int argc, char **argv, char **envp) {
   llvm::Module *mainModule = M.get();
   // Push the module as the first entry
   loadedModules.emplace_back(std::move(M));
+  
+  if (InjectFaults) {
+      legacy::PassManager pm;
+      pm.add(new DivFaultPass());
+      pm.run(*mainModule);
+  }
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,

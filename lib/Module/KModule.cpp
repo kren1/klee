@@ -76,13 +76,6 @@ namespace {
 	       cl::cat(ModuleCat));
 
   cl::opt<bool>
-  InjectFaults("inject-fault",
-               cl::desc("Injects div by zeor faults"),
-               cl::init(false),
-	       cl::cat(ModuleCat));
-
-
-  cl::opt<bool>
   OutputModule("output-module",
                cl::desc("Write the bitcode for the final transformed module"),
                cl::init(false),
@@ -253,9 +246,6 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
 
   // This pass will replace atomic instructions with non-atomic operations
   pm.add(createLowerAtomicPass());
-  if (InjectFaults) {
-      pm.add(new DivFaultPass());
-  }
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
 
