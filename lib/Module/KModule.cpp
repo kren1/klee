@@ -21,6 +21,7 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Interpreter.h"
 #include "klee/OptionCategories.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -296,6 +297,7 @@ void KModule::optimiseAndPrepare(
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
   pm3.add(new FunctionAliasPass());
+  pm3.add(createAlwaysInlinerLegacyPass(false));
   pm3.run(*module);
 }
 
