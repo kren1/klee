@@ -112,6 +112,7 @@ public:
           std::vector< std::vector<unsigned char> > values;
           for(int i = 0; i < out->numObjects; i++) {
               KTestObject& obj = out->objects[i]; 
+              if(std::strcmp(obj.name,"model_version") == 0) continue;
               objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
               values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
           }

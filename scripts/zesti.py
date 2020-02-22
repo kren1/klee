@@ -4,10 +4,10 @@ import os
 import subprocess
 import tempfile
 
-#GEN_BOUT="/data/klee/build7.0/bin/gen-bout"
-#KLEE="/data/klee/build7.0/bin/klee"
-KLEE="klee"
-GEN_BOUT="gen-bout"
+GEN_BOUT="/data/klee/build7.0/bin/gen-bout"
+KLEE="/data/klee/build7.0/bin/klee"
+#KLEE="klee"
+#GEN_BOUT="gen-bout"
 
 def split_args():
   prog = None
