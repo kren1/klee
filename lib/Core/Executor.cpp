@@ -109,6 +109,7 @@ cl::OptionCategory TestGenCat("Test generation options",
 
 namespace {
 
+SQLIntStatistic pendingMemoryStates("PendingMemoryStates", "PMemS");
 /*** Test generation options ***/
 
 cl::opt<bool> DumpStatesOnHalt(
@@ -3722,6 +3723,7 @@ void Executor::executeMemoryOperation(ExecutionState &stateIn,
         }
 
         if(inOutOfBoundState.second) { //out of bound state
+            ++pendingMemoryStates;
             klee_warning_once(0,"Delegating OOB check");
             inOutOfBoundState.second->pc = inOutOfBoundState.second->prevPC;
         }
