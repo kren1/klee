@@ -66,6 +66,8 @@ cl::opt<bool> RandomPendingDelition(
 Searcher::~Searcher() {
 }
 
+SQLIntStatistic pendingRevives("PendingRevives", "PRev");
+SQLIntStatistic pendingKills("PendingKills", "PKills");
 ///
 
 ExecutionState &DFSSearcher::selectState() {
@@ -468,10 +470,12 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
           basePendingSearcher->update(nullptr,{}, {&es});
           size--; //This doesn't do delition, but it makes sense for reviving
           revived++;
+          ++pendingRevives;
  //         llvm::errs() << "success\n";
       } else {
  //         llvm::errs() << "killing it\n";
           killed++;
+          ++pendingKills;
           size--;
           basePendingSearcher->update(nullptr,{}, {&es});
           exec->processTree->remove(es.ptreeNode);
@@ -511,9 +515,11 @@ bool PendingSearcher::empty() {
           exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
           basePendingSearcher->update(nullptr,{}, {&es});
- //         llvm::errs() << "success\n";
+//          llvm::errs() << "success\n";
+          ++pendingRevives;
       } else {
- //         llvm::errs() << "killing it\n";
+//          llvm::errs() << "killing it\n";
+          ++pendingKills;
           basePendingSearcher->update(nullptr,{}, {&es});
           exec->processTree->remove(es.ptreeNode);
           auto it2 = exec->states.find(&es);
