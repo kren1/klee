@@ -38,6 +38,12 @@ static exe_disk_file_t *__get_sym_file(const char *pathname) {
   if (!pathname)
     return NULL;
 
+  char cwd[1024];
+  getcwd(cwd, 1024);
+  if(strncmp(pathname, cwd, strlen(cwd)) == 0) {
+      pathname += strlen(cwd) + 1; 
+
+  }
   char c = pathname[0];
   unsigned i;
 
