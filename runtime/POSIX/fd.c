@@ -1001,6 +1001,7 @@ int fcntl(int fd, int cmd, ...) {
   exe_file_t *f = __get_file(fd);
   va_list ap;
   unsigned arg; /* 32 bit assumption (int/ptr) */
+  struct flock* lock;
 
   if (!f) {
     errno = EBADF;
@@ -1013,6 +1014,10 @@ int fcntl(int fd, int cmd, ...) {
    if (cmd==F_GETFD || cmd==F_GETFL || cmd==F_GETOWN) {
 #endif
     arg = 0;
+  } else if(cmd == F_GETLK || cmd == F_SETLK || cmd == F_SETLKW) {
+    va_start(ap, cmd);
+    lock = va_arg(ap, struct flock*);
+    va_end(ap);
   } else {
     va_start(ap, cmd);
     arg = va_arg(ap, int);
@@ -1041,6 +1046,19 @@ int fcntl(int fd, int cmd, ...) {
 	 which we could also handle properly. 
       */
       return 0;
+    }
+    //Initially no other process keeps a lock, so we say the file is unlocked.
+    //Ofcourse this doesn't account for a program locking and then checking if a
+    //lock is there. However this is quite paranoid programing, that we can assume
+    //doesn't happen.
+    case F_GETLK: {
+        lock->l_type = F_UNLCK;
+        return 0;
+    }
+    //We assume the application does locking correctly and will lock/unlock files correctly.
+    //Therefore this call always succeeds.
+    case F_SETLK: {
+        return 0;
     }
     default:
       klee_warning("symbolic file, ignoring (EINVAL)");
