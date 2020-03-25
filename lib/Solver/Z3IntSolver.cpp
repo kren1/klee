@@ -87,7 +87,9 @@ class IsIntExpr : public ExprVisitor {
           ++stats::readLSBMissMatchFail;
           return no();
       }
-      return visitRead(*re);
+      visit(re->index);
+      if(!isIntExpr) return no();
+      return Action::skipChildren();
     }
  
     Action visitAnd(const AndExpr& e) override { 
