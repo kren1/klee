@@ -123,6 +123,11 @@ cl::opt<bool> DumpStatesOnHalt(
     cl::desc("Dump test cases for all active states on exit (default=true)"),
     cl::cat(TestGenCat));
 
+cl::opt<bool> RandomRNG(
+    "random-RNG",
+    cl::init(false),
+    cl::desc("Seed theRNG with a random int"));
+
 cl::opt<bool> OnlyOutputStatesCoveringNew(
     "only-output-states-covering-new",
     cl::init(false),
@@ -3790,6 +3795,8 @@ void Executor::runFunctionAsMain(Function *f,
 				 char **envp) {
   std::vector<ref<Expr> > arguments;
 
+  if(RandomRNG)
+    theRNG.seed(rand());
   // force deterministic initialization of memory objects
   srand(1);
   srandom(1);
