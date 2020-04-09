@@ -11,6 +11,7 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Statistics.h"
 
 #include <vector>
 
@@ -20,11 +21,13 @@ PTree::PTree(const data_type &_root) : root(PTreeNodePtr(new Node(nullptr, _root
     
     _root->ptreeNode = root.getPointer();
 }
+SQLIntStatistic totalStates("TotalStates", "TStates");
 
 std::pair<PTreeNode*, PTreeNode*>
 PTree::split(Node *n, 
              const data_type &leftData, 
              const data_type &rightData) {
+  ++totalStates;
   auto node = n;
   assert(n && !n->left.getPointer() && !n->right.getPointer());
   assert(n == rightData->ptreeNode && "Split expect current to be right");
