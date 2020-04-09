@@ -314,13 +314,17 @@ bool CexCachingSolver::computeValidity(const Query& query,
          "assignment evaluation did not result in constant");
 
   if (cast<ConstantExpr>(q)->isTrue()) {
+     TimerStatIncrementer t(stats::infeasibleConstraintsQueryTime);
     if (!getAssignment(query, a))
       return false;
     result = !a ? Solver::True : Solver::Unknown;
+    if(a) t.ignore();
   } else {
+    TimerStatIncrementer t(stats::infeasibleConstraintsQueryTime);
     if (!getAssignment(query.negateExpr(), a))
       return false;
     result = !a ? Solver::False : Solver::Unknown;
+    if(a) t.ignore();
   }
   
   return true;

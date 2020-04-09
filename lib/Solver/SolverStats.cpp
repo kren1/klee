@@ -23,6 +23,7 @@ SQLIntStatistic stats::queryConstructTime("QueryConstructTime", "QBtime", 1);
 SQLIntStatistic stats::queryConstructs("QueriesConstructs", "QB");
 SQLIntStatistic stats::queryCounterexamples("QueriesCEX", "Qcex", 1);
 SQLIntStatistic stats::queryTime("QueryTime", "Qtime");
+SQLIntStatistic stats::infeasibleConstraintsQueryTime("InfeasibleQueryTime", "IkQT");
 
 #ifdef KLEE_ARRAY_DEBUG
 SQLIntStatistic stats::arrayHashTime("ArrayHashTime", "AHtime");

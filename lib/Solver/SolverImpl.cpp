@@ -9,6 +9,9 @@
 
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Statistic.h"
+#include "klee/TimerStatIncrementer.h"
 
 using namespace klee;
 
@@ -16,14 +19,20 @@ SolverImpl::~SolverImpl() {}
 
 bool SolverImpl::computeValidity(const Query &query, Solver::Validity &result) {
   bool isTrue, isFalse;
+  {
+  TimerStatIncrementer t(stats::infeasibleConstraintsQueryTime);
   if (!computeTruth(query, isTrue))
     return false;
+  if(!isTrue) t.ignore();
+  }
   if (isTrue) {
     result = Solver::True;
   } else {
+    TimerStatIncrementer t(stats::infeasibleConstraintsQueryTime);
     if (!computeTruth(query.negateExpr(), isFalse))
       return false;
     result = isFalse ? Solver::False : Solver::Unknown;
+    if(!isFalse) t.ignore();
   }
   return true;
 }

@@ -22,13 +22,17 @@ namespace klee {
   private:
     const WallTimer timer;
     Statistic &statistic;
+    bool isIgnored = false;
 
   public:
     explicit TimerStatIncrementer(Statistic &statistic) : statistic(statistic) {}
     ~TimerStatIncrementer() {
       // record microseconds
-      statistic += timer.delta().toMicroseconds();
+      if(!isIgnored)
+        statistic += timer.delta().toMicroseconds();
     }
+
+    void ignore() {isIgnored = true;};
 
     time::Span delta() const { return timer.delta(); }
   };

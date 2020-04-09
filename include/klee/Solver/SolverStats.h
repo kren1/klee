@@ -27,6 +27,7 @@ extern SQLIntStatistic queryConstructTime;
 extern SQLIntStatistic queryConstructs;
 extern SQLIntStatistic queryCounterexamples;
 extern SQLIntStatistic queryTime;
+extern SQLIntStatistic infeasibleConstraintsQueryTime;
 
 #ifdef KLEE_ARRAY_DEBUG
 extern SQLIntStatistic arrayHashTime;
