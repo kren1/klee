@@ -18,13 +18,18 @@ namespace klee {
   private:
     WallTimer timer;
     Statistic &statistic;
+    bool isIgnored = false;
 
   public:
     TimerStatIncrementer(Statistic &_statistic) : statistic(_statistic) {}
     ~TimerStatIncrementer() {
       // record microseconds
-      statistic += timer.check().toMicroseconds();
+      if(!isIgnored) {
+        statistic += timer.check().toMicroseconds();
+      }
     }
+    
+    void ignore() {isIgnored = true;}
 
     time::Span check() { return timer.check(); }
   };

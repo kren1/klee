@@ -68,6 +68,8 @@ Searcher::~Searcher() {
 
 SQLIntStatistic pendingRevives("PendingRevives", "PRev");
 SQLIntStatistic pendingKills("PendingKills", "PKills");
+SQLIntStatistic infeasibleConstraintsQueryTime("InfeasibleQueryTime", "iQT");
+SQLIntStatistic infeasibleKillingConstraintsQueryTime("InfeasibleKillingQueryTime", "IkQT");
 ///
 
 ExecutionState &DFSSearcher::selectState() {
@@ -463,6 +465,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
       es.pendingConstraint = nullptr;
       assert(expr->getWidth());
       bool status = false, solverResult = false;
+      TimerStatIncrementer t(infeasibleKillingConstraintsQueryTime);
       status = exec->solver->mayBeTrue(es, expr, solverResult);
       if(status && solverResult) {
           exec->addConstraint(es, expr);
@@ -471,6 +474,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
           size--; //This doesn't do delition, but it makes sense for reviving
           revived++;
           ++pendingRevives;
+          t.ignore();
  //         llvm::errs() << "success\n";
       } else {
  //         llvm::errs() << "killing it\n";
@@ -510,12 +514,14 @@ bool PendingSearcher::empty() {
       ref<Expr> expr = es.pendingConstraint;
       es.pendingConstraint = nullptr;
       assert(expr->getWidth());
+      TimerStatIncrementer t(infeasibleConstraintsQueryTime);
       status = exec->solver->mayBeTrue(es, expr, solverResult);
       if(status && solverResult) {
           exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
           basePendingSearcher->update(nullptr,{}, {&es});
 //          llvm::errs() << "success\n";
+          t.ignore();
           ++pendingRevives;
       } else {
 //          llvm::errs() << "killing it\n";
