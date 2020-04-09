@@ -12,6 +12,7 @@
 #include "klee/ExecutionState.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Statistics.h"
 
 #include <vector>
 
@@ -20,9 +21,11 @@ using namespace klee;
 PTree::PTree(ExecutionState *initialState) {
   root = std::make_unique<PTreeNode>(nullptr, initialState);
 }
+SQLIntStatistic totalStates("TotalStates", "TStates");
 
 void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
   assert(node && !node->left && !node->right);
+  ++totalStates;
 
   node->state = nullptr;
   node->left = std::make_unique<PTreeNode>(node, leftState);
