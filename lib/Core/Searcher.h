@@ -43,6 +43,7 @@ namespace klee {
     virtual std::vector<ExecutionState *> selectForDelition(int size) { return {}; };
 
     virtual bool empty() = 0;
+    virtual int getSize() {return 0; }
 
     // prints name of searcher as a klee_message()
     // TODO: could probably make prettier or more flexible
@@ -171,6 +172,8 @@ namespace klee {
       } 
       os << size << ")";
     }
+     int getSize() {return size; }
+
   };
 
   class RandomPathSearcher : public Searcher {
@@ -194,6 +197,7 @@ namespace klee {
 
       os << "(RP " << size << ")";
     }
+     int getSize() {return size; }
   };
 
   class MergeHandler;

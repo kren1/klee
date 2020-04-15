@@ -457,7 +457,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
     exec->solver->setTimeout(maxReviveTime);
     bool rememberIgnore =  IgnoreSolverFailures;
     IgnoreSolverFailures = true;
-    while(!basePendingSearcher->empty() && size > 0) {
+    while(!basePendingSearcher->empty() && size - revived > 0 && (basePendingSearcher->getSize() > size)) {
       if(exec->haltExecution) return {};
       auto& es = basePendingSearcher->selectState();
       assert(!es.pendingConstraint.isNull());
@@ -471,7 +471,6 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
           exec->addConstraint(es, expr);
           baseNormalSearcher->update(nullptr, {&es}, {});
           basePendingSearcher->update(nullptr,{}, {&es});
-          size--; //This doesn't do delition, but it makes sense for reviving
           revived++;
           ++pendingRevives;
           t.ignore();
