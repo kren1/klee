@@ -19,16 +19,24 @@ using namespace klee;
 void klee::findReads(ref<Expr> e, 
                      bool visitUpdates,
                      std::vector< ref<ReadExpr> > &results) {
+    ExprHashSet visited;
+    std::set<const UpdateNode *> updates;
+    findReads(e, visitUpdates, results, visited, updates);
+}
+void klee::findReads(ref<Expr> e, 
+                     bool visitUpdates,
+                     std::vector< ref<ReadExpr> > &results,
+                     ExprHashSet &visited,
+                     std::set<const UpdateNode *> &updates
+                     ) {
   // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited 
   std::vector< ref<Expr> > stack;
-  ExprHashSet visited;
-  std::set<const UpdateNode *> updates;
   
   if (!isa<ConstantExpr>(e)) {
     visited.insert(e);
     stack.push_back(e);
   }
-
+  bool usedMemoed = false;
   while (!stack.empty()) {
     ref<Expr> top = stack.back();
     stack.pop_back();
@@ -37,6 +45,12 @@ void klee::findReads(ref<Expr> e,
       // We memoized so can just add to list without worrying about
       // repeats.
       results.push_back(re);
+      if(re->child_reads && visitUpdates) {
+//          llvm::errs() << "PING! memoizing find reads " << re->child_reads->size() << "\n";
+          results.insert(results.end(), re->child_reads->begin(), re->child_reads->end());
+          usedMemoed = true;
+          continue;
+      }
 
       if (!isa<ConstantExpr>(re->index) &&
           visited.insert(re->index).second)
@@ -69,6 +83,14 @@ void klee::findReads(ref<Expr> e,
           stack.push_back(k);
       }
     }
+  }
+  if(usedMemoed) {
+      ExprHashSet dup(results.begin(), results.end());
+//      llvm::errs() << "results reads " << results.size() << " dups " << dup.size() << "\n";
+      results.erase(results.begin(), results.end());
+      for(auto& e : dup) {
+        results.emplace_back((ReadExpr*) e.get());
+      }
   }
 }
 

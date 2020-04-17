@@ -11,6 +11,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Expr/ExprUtil.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
@@ -1206,6 +1207,23 @@ static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   }
 }
 
+ReadExpr::ReadExpr(const UpdateList &_updates, const ref<Expr> &_index) : 
+    updates(_updates), index(_index) { 
+        assert(updates.root); 
+        std::vector<ref<ReadExpr>> c_reads;
+        ExprHashSet visited;
+        std::set<const UpdateNode *> ups;
+        findReads(index, true, c_reads, visited, ups);
+        for (const UpdateNode *un=updates.head; un; un=un->next) {
+            findReads(un->index, true, c_reads, visited, ups);
+            findReads(un->value, true, c_reads, visited, ups);
+        }
+        if(c_reads.size() > 20) {
+            ExprHashSet dups(c_reads.begin(), c_reads.end());
+//            llvm::errs() << "C reads " << c_reads.size() << " dups " << dups.size() << "\n";
+            child_reads = std::make_unique<std::vector<ref<ReadExpr>>>(std::move(c_reads));
+        }
+}
 CMPCREATE_T(EqExpr, Eq, EqExpr, EqExpr_createPartial, EqExpr_createPartialR)
 CMPCREATE(UltExpr, Ult)
 CMPCREATE(UleExpr, Ule)

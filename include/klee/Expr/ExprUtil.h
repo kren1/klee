@@ -29,6 +29,12 @@ namespace klee {
                  bool visitUpdates,
                  std::vector< ref<ReadExpr> > &result);
   
+  void findReads(ref<Expr> e, 
+                 bool visitUpdates,
+                 std::vector< ref<ReadExpr> > &result,
+                 ExprHashSet &visited,
+                 std::set<const UpdateNode *> &updates
+                 );
   /// Return a list of all unique symbolic objects referenced by the given
   /// expression.
   void findSymbolicObjects(ref<Expr> e,

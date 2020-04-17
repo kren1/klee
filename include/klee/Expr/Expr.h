@@ -568,6 +568,7 @@ class ReadExpr : public NonConstantExpr {
 public:
   static const Kind kind = Read;
   static const unsigned numKids = 1;
+  std::unique_ptr<std::vector<ref<ReadExpr>>> child_reads;
   
 public:
   UpdateList updates;
@@ -597,8 +598,7 @@ public:
   virtual unsigned computeHash();
 
 private:
-  ReadExpr(const UpdateList &_updates, const ref<Expr> &_index) : 
-    updates(_updates), index(_index) { assert(updates.root); }
+  ReadExpr(const UpdateList &_updates, const ref<Expr> &_index);
 
 public:
   static bool classof(const Expr *E) {
