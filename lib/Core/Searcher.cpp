@@ -501,10 +501,8 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
   //  if(basePendingSearcher->empty()) {
   //      klee_warning("Deleted as many pending states as possible");
   //  }
-    if(!basePendingSearcher->empty()) {
-        auto ret = basePendingSearcher->selectForDelition(size);
-        size -= ret.size();
-    }
+    auto ret = basePendingSearcher->selectForDelition(size);
+    size -= ret.size();
     if(size > 0) {
      auto retNormal =  baseNormalSearcher->selectForDelition(size);
      ret.insert(ret.end(), retNormal.begin(), retNormal.end());
