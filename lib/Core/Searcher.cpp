@@ -327,13 +327,9 @@ std::vector<ExecutionState *> RandomPathSearcher::selectForDelition(int size) {
     std::vector<ExecutionState* > ret;
     ret.reserve(size);
     for(auto& es : executor.states) {
-      auto pnode = es->ptreeNode;
-      auto parentKid = pnode == pnode->parent->right.getPointer() ? pnode->parent->right : pnode->parent->left;
-      if(IS_OUR_NODE_VALID(parentKid)){ 
-          size--;
-          if(size < 1) break;
-          ret.push_back(es);
-      } 
+        size--;
+        if(size < 1) break;
+        ret.push_back(es);
     }
     return ret;
 }
@@ -501,14 +497,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
   //  if(basePendingSearcher->empty()) {
   //      klee_warning("Deleted as many pending states as possible");
   //  }
-    auto ret = basePendingSearcher->selectForDelition(size);
-    size -= ret.size();
-    if(size > 0) {
-     auto retNormal =  baseNormalSearcher->selectForDelition(size);
-     ret.insert(ret.end(), retNormal.begin(), retNormal.end());
-
-    }
-    return ret;
+    return baseNormalSearcher->selectForDelition(size);
 }
 
 bool PendingSearcher::empty() { 
