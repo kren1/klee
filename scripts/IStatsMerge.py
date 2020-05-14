@@ -75,7 +75,7 @@ def merge(inputs, output, outputDir):
             elif ln.startswith('events:'):
                 events = ln[len('events: '):].strip().split(' ')
             print(lns)
-            if not allEqual(lns):
+            if not allEqual([l.strip() for l in lns]):
                 raise MergeError("headers differ")
             output.write(ln)
 
