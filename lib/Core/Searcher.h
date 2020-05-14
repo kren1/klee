@@ -17,7 +17,9 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_map>
 #include <vector>
+#include <functional>
 
 namespace llvm {
   class BasicBlock;
@@ -76,6 +78,7 @@ namespace klee {
       BFS,
       RandomState,
       RandomPath,
+      ZESTI,
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
@@ -97,6 +100,55 @@ namespace klee {
     bool empty() { return states.empty(); }
     void printName(llvm::raw_ostream &os) {
       os << "DFSSearcher\n";
+    }
+  };
+
+  class EmptySearcher : public Searcher {
+  public:
+    ExecutionState &selectState() { assert(0 && "Empty searcher is always empty");}
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) {}
+    bool empty() { return true; }
+    void printName(llvm::raw_ostream &os) {
+      os << "EmptySearcher\n";
+    }
+  };
+
+  class SwappingSearcher : public Searcher {
+    Searcher* searchers[2];
+    unsigned currentSearcher = 0;
+    std::function<void(void)> swapCallback;
+
+  public:
+    SwappingSearcher(Searcher* s1, Searcher* s2, std::function<void(void)> _cb) : swapCallback(_cb) {
+        searchers[0] = s1;
+        searchers[1] = s2;
+    }
+    virtual ~SwappingSearcher() { delete searchers[0]; delete searchers[1]; }
+    ExecutionState &selectState() { return searchers[currentSearcher]->selectState(); }
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) {
+      for (int i = currentSearcher; i < 2; i++)
+        (searchers[i])->update(current, addedStates, removedStates);
+    }
+    bool empty() { 
+        auto ret = searchers[currentSearcher]->empty();
+        if(currentSearcher == 0 && ret) {
+            currentSearcher++;
+            swapCallback();
+            //TODO: add callback to disable pending mode
+            return empty();
+        }
+        return ret;
+    }
+    void printName(llvm::raw_ostream &os) {
+      os << "<SwappingSearcher>\n";
+      for (int i = 0; i < 2; i++)
+        (searchers[i])->printName(os);
+      os << "</SwappingSearcher>\n";
+
     }
   };
 
@@ -271,12 +323,43 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "<PendingSearcher> ";
+      os << "<PendingSearcher>\n";
       baseNormalSearcher->printName(os);
       basePendingSearcher->printName(os);
       os << "</PendingSearcher>\n";
     }
   };
+
+  class ZESTIPendingSearcher : public Searcher {
+    Executor* exec;
+    Searcher *normalSearcher;
+    //Base depth from which we do bounded exploration
+    int currentBaseDepth = -1;
+    int bound = 0;
+
+    //marks the point where the exploration mode started and it should not accept pending states any more
+    bool hasSelectedState = false;
+    time::Span maxReviveTime;
+    std::unordered_map<const ExecutionState*, int> smallestSensitiveDistance;
+
+    std::vector<ExecutionState*> normalStates;
+    std::vector<ExecutionState*> pendingStates;
+    std::vector<ExecutionState*> toDelete;
+
+  public:
+    ZESTIPendingSearcher(Executor* _exec);
+    void computeDistances();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty();
+    void printName(llvm::raw_ostream &os) {
+      os << "<ZESTIPendingSearcher>\n";
+    }
+  };
+
 
   class IterativeDeepeningTimeSearcher : public Searcher {
     Searcher *baseSearcher;

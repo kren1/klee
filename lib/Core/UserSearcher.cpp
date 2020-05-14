@@ -31,6 +31,7 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
              "with nurs:covnew)"),
     cl::values(
         clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
+        clEnumValN(Searcher::ZESTI, "zesti", "use zesti"),
         clEnumValN(Searcher::BFS, "bfs",
                    "use Breadth First Search (BFS), where scheduling decisions "
                    "are taken at the level of (2-way) forks"),
@@ -119,12 +120,13 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount); break;
   case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount); break;
   case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost); break;
+  case Searcher::ZESTI: assert(0 &&  "Should be special cased before"); break;
   }
 
   return searcher;
 }
 
-Searcher *klee::constructUserSearcher(Executor &executor) {
+Searcher *constructUserSearcherInternal(Executor &executor) {
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
   
@@ -154,6 +156,33 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
+  }
+
+
+  return searcher;
+}
+Searcher *klee::constructUserSearcher(Executor &executor) {
+
+  Searcher* searcher;
+  if(CoreSearch[0] == Searcher::ZESTI) {
+      auto zestiPs = new ZESTIPendingSearcher(&executor);
+      executor.gatherSenstiveInstructions = true;
+      assert(CoreSearch.size() == 1 && "Can't specify more than one searcher with ZESTI");
+      searcher = new SwappingSearcher(
+                    new PendingSearcher(
+                          new DFSSearcher(),
+                          new EmptySearcher(), &executor
+                        ),
+                    zestiPs,
+                    [&](){ llvm::errs() << "SWITCH!\n"; 
+//                           zestiPs->computeDistances();
+                           executor.gatherSenstiveInstructions = false;
+                           executor.normalMode();}
+                 );
+  } else {
+    searcher = constructUserSearcherInternal(executor);
+    auto pendingStateSearcher = constructUserSearcherInternal(executor);
+    searcher = new PendingSearcher(searcher, pendingStateSearcher, &executor);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

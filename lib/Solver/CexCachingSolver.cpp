@@ -236,13 +236,18 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     if(pendingCache) {
         std::vector<std::pair<std::set<ref<Expr>>, Assignment*>> subsets;
         cache.subsets(key, subsets);
+//        for(auto& k : key) k->dump();
         for(auto setAssigment : subsets) {
             auto a = setAssigment.second;
+//            a->dump();
+//            for(auto& k : key) a->evaluate(k)->dump();
             if(a && a->satisfies(key.begin(), key.end())) {
               result = a;
+ //             llvm::errs() << "SUCESS\n";
               return true;
             }
         }
+//              llvm::errs() << "FAIL\n";
          
     } else {
         // FIXME: Which order? one is sure to be better.

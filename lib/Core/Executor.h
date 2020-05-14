@@ -92,6 +92,7 @@ class Executor : public Interpreter {
   friend class MergeHandler;
   friend class MergingSearcher;
   friend class PendingSearcher;
+  friend class ZESTIPendingSearcher;
 
 public:
   class Timer {
@@ -479,7 +480,14 @@ private:
   void dumpStates();
   void dumpPTree();
 
+  bool pendingMode = true;
 public:
+  //switch from pending mode to normal mode
+  void normalMode();
+  bool gatherSenstiveInstructions = false;
+  //gathers the depths of senstive instructions
+  std::set<int> senstiveDepths;
+
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
       InterpreterHandler *ie);
   virtual ~Executor();

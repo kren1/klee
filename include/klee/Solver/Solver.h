@@ -54,8 +54,10 @@ namespace klee {
     // DO NOT IMPLEMENT.
     Solver(const Solver&);
     void operator=(const Solver&);
+    bool pendingMode = true;
 
   public:
+    void normalMode() { pendingMode = false; }
     enum Validity {
       True = 1,
       False = -1,

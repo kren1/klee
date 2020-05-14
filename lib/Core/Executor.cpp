@@ -1138,10 +1138,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 //    errs() << "Adding true and falste constraints \n";
-    trueState->pendingConstraint = condition;
-    falseState->pendingConstraint = Expr::createIsZero(condition);
-//    addConstraint(*trueState, condition);
-//    addConstraint(*falseState, Expr::createIsZero(condition));
+    if(pendingMode) {
+      trueState->pendingConstraint = condition;
+      falseState->pendingConstraint = Expr::createIsZero(condition);
+    } else {
+      addConstraint(*trueState, condition);
+      addConstraint(*falseState, Expr::createIsZero(condition));
+    }
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2774,8 +2777,14 @@ bool Executor::attemptToRevive(ExecutionState* current, Solver* fastSolver) {
   return false;
 }
 
+void Executor::normalMode() {
+    pendingMode = false;
+    solver->solver->normalMode();
+}
+
 void Executor::updateStates(ExecutionState *current) {
 
+if(pendingMode) {
   if(attemptToRevive(current, fastSolver))  {
 //    errs() << ("current CEX cache HIT!\n") ;
   } else if(!PendingKleeChecks 
@@ -2832,6 +2841,7 @@ void Executor::updateStates(ExecutionState *current) {
       }
   } */
   }
+}
 
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
@@ -3063,10 +3073,8 @@ void Executor::run(ExecutionState &initialState) {
   }
 
   searcher = constructUserSearcher(*this);
-  auto pendingStateSearcher = constructUserSearcher(*this);
-//  auto pendingStateSearcher = new DFSSearcher();
-//  searcher = new DFSSearcher();
-  searcher = new PendingSearcher(searcher, pendingStateSearcher, this);
+//  auto pendingStateSearcher = constructUserSearcher(*this);
+//  searcher = new PendingSearcher(searcher, pendingStateSearcher, this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
@@ -3089,6 +3097,7 @@ void Executor::run(ExecutionState &initialState) {
   delete searcher;
   searcher = 0;
 
+  updateStates(nullptr);
   doDumpStates();
 }
 
@@ -3659,6 +3668,7 @@ void Executor::resolveExact(ExecutionState &state,
        it != ie; ++it) {
     ref<Expr> inBounds = EqExpr::create(p, it->first->getBaseExpr());
     
+    //TODO: handle pending states
     StatePair branches = fork(*unbound, inBounds, true);
     
     if (branches.first)
@@ -3714,6 +3724,9 @@ void Executor::executeMemoryOperation(ExecutionState &stateIn,
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
+    if(gatherSenstiveInstructions && !dyn_cast<ConstantExpr>(check)) {
+        senstiveDepths.insert(state->depth);
+    }
   
     bool inBounds = false;
     if(PendingBounds) { //pending memory case
@@ -4055,8 +4068,12 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::vector<unsigned char> > >
                                    &res) {
   solver->setTimeout(coreSolverTimeout);
-
+  
   ExecutionState tmp(state);
+  if(!state.pendingConstraint.isNull()) {
+    auto b = attemptToRevive(&tmp, noWriteCexSolver);
+    llvm::errs() << "Attempt to revive pending solution " << b << "\n";
+  }
 
   // Go through each byte in every test case and attempt to restrict
   // it to the constraints contained in cexPreferences.  (Note:
