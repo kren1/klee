@@ -509,6 +509,7 @@ std::vector<ExecutionState *> PendingSearcher::selectForDelition(int size) {
 bool PendingSearcher::empty() { 
   if(!baseNormalSearcher->empty()) return false;
 
+
   bool solverResult = false, status = false;
   exec->solver->setTimeout(maxReviveTime);
   while(baseNormalSearcher->empty()) {

@@ -474,8 +474,10 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
+//  this->fastSolver = klee::createIndependentSolver(klee::createCexCachingSolver(createDummySolver(), &arrayCache));
+  this->fastSolver = (klee::createCexCachingSolver(createDummySolver(), &arrayCache));
   this->noWriteCexSolver = klee::createIndependentSolver(klee::createCachingSolver(klee::createROCexCachingSolver(coreSolver)));
+  //this->noWriteCexSolver = (klee::createCachingSolver(klee::createROCexCachingSolver(coreSolver)));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
@@ -1253,7 +1255,8 @@ Executor::toConstant(ExecutionState &state,
     return CE;
 
   ref<ConstantExpr> value;
-  bool success = solver->getValue(state, e, value);
+  //bool success = solver->getValue(state, e, value);
+  bool success = fastSolver->getValue(Query(state.constraints, e), value);
   assert(success && "FIXME: Unhandled solver failure");
   (void) success;
 

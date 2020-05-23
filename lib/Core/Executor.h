@@ -123,6 +123,7 @@ public:
   };
 
   TimingSolver *solver;
+  Solver *fastSolver;
 private:
   static const char *TerminateReasonNames[];
 
@@ -133,7 +134,6 @@ private:
   Searcher *searcher;
 
   ExternalDispatcher *externalDispatcher;
-  Solver *fastSolver;
   Solver *noWriteCexSolver;
   MemoryManager *memory;
   std::set<ExecutionState*> states;

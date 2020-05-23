@@ -83,6 +83,7 @@ class CexCachingSolver : public SolverImpl {
   Solver *solver;
   bool readOnlyCache = false;
   bool pendingCache = false;
+  std::vector<Assignment*> seedAssigments;
   
   static MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
@@ -103,6 +104,7 @@ class CexCachingSolver : public SolverImpl {
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   CexCachingSolver(Solver *_solver, ArrayCache *cache) : solver(_solver), pendingCache(true) {
+      int numSeeds = 0;
       for (const auto& filename : SeedOutFile)  {
           KTest *out = kTest_fromFile(filename.c_str());
           if (!out) {
@@ -112,14 +114,20 @@ public:
           std::vector< std::vector<unsigned char> > values;
           for(int i = 0; i < out->numObjects; i++) {
               KTestObject& obj = out->objects[i]; 
-              if(std::strcmp(obj.name,"model_version") == 0) continue;
+//              if(std::strcmp(obj.name,"model_version") == 0) continue;
               objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
               values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
           }
-          auto a = new Assignment(objects, values);
+          numSeeds++;
           KeyType key;
+          auto a = new Assignment(objects, values);
           assignmentsTable.insert(a);
-          CexCachingSolver::cache.insert(key, a);
+          if(numSeeds < 1) {
+              //can't put more than 1 seed as a subset of all
+            CexCachingSolver::cache.insert(key, a);
+          } else {
+            seedAssigments.push_back(a);
+          }
       }
 
   }
@@ -243,7 +251,16 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 //            for(auto& k : key) a->evaluate(k)->dump();
             if(a && a->satisfies(key.begin(), key.end())) {
               result = a;
- //             llvm::errs() << "SUCESS\n";
+//              llvm::errs() << "SUCESS\n";
+              return true;
+            }
+        }
+        int seedNum = 0;
+        for (auto a : seedAssigments) {
+            seedNum++;
+            if(a && a->satisfies(key.begin(), key.end())) {
+              result = a;
+//              llvm::errs() << seedNum <<  " SUCESS seed \n";
               return true;
             }
         }
