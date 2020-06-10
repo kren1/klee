@@ -5,6 +5,8 @@ import subprocess
 import tempfile
 import select
 import shutil
+import hashlib
+
 HELP="""OVERVIEW: ZESTI like wrapper of KLEE
 
 USAGE:  klee-zesti [klee-options] <input bytecode> <concrete program arguments>

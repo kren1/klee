@@ -264,7 +264,7 @@ namespace {
 
 
   cl::list<std::string>
-  SeedOutFile("no-use-seed-file",
+  SeedOutFileOld("no-use-seed-file",
               cl::desc(".ktest file to be used as seed"),
               cl::cat(SeedingCat));
 
@@ -301,6 +301,7 @@ namespace {
 }
 
 namespace klee {
+extern cl::list<std::string> SeedOutFile;
 extern cl::opt<std::string> MaxTime;
 }
 
@@ -1344,19 +1345,37 @@ int main(int argc, char **argv, char **envp) {
     pEnvp = envp;
   }
 
-  pArgc = InputArgv.size() + 1;
-  pArgv = new char *[pArgc];
-  for (unsigned i=0; i<InputArgv.size()+1; i++) {
-    std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
-    unsigned size = arg.size() + 1;
-    char *pArg = new char[size];
+  if (SeedOutFile.size() == 1 && InputArgv.empty() && WithPOSIXRuntime) {
+      KTest *singleSeed = kTest_fromFile(SeedOutFile[0].c_str());
+      if(!singleSeed) {
+          llvm::errs() << "Can't read seed " << SeedOutFile[0] << "\n";
+          exit(1);
+      }
+      pArgc = singleSeed->numArgs;
+      pArgv = new char *[pArgc];
+      pArgv[0] = std::strcpy(new char[InputFile.size() + 1], InputFile.data());
+      for (int i = 1; i < pArgc; i++) {
+        char *arg = singleSeed->args[i];
+        pArgv[i] = std::strcpy(new char[std::strlen(arg) + 1], arg);
+        llvm::errs() << "Arg: " << pArgv[i] << "\n";
+      }
 
-    std::copy(arg.begin(), arg.end(), pArg);
-    pArg[size - 1] = 0;
 
-    pArgv[i] = pArg;
+      free(singleSeed);
+  } else {
+      pArgc = InputArgv.size() + 1;
+      pArgv = new char *[pArgc];
+      for (unsigned i=0; i<InputArgv.size()+1; i++) {
+        std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
+        unsigned size = arg.size() + 1;
+        char *pArg = new char[size];
+
+        std::copy(arg.begin(), arg.end(), pArg);
+        pArg[size - 1] = 0;
+
+        pArgv[i] = pArg;
+      }
   }
-
   std::vector<bool> replayPath;
 
   if (ReplayPathFile != "") {
@@ -1403,7 +1422,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   if (!ReplayKTestDir.empty() || !ReplayKTestFile.empty()) {
-    assert(SeedOutFile.empty());
+    assert(SeedOutFileOld.empty());
     assert(SeedOutDir.empty());
 
     std::vector<std::string> kTestFiles = ReplayKTestFile;
@@ -1452,7 +1471,7 @@ int main(int argc, char **argv, char **envp) {
   } else {
     std::vector<KTest *> seeds;
     for (std::vector<std::string>::iterator
-           it = SeedOutFile.begin(), ie = SeedOutFile.end();
+           it = SeedOutFileOld.begin(), ie = SeedOutFileOld.end();
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (!out) {

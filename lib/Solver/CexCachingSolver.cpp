@@ -28,7 +28,7 @@
 using namespace klee;
 using namespace llvm;
 
-namespace {
+namespace klee {
 cl::opt<bool> DebugCexCacheCheckBinding(
     "debug-cex-cache-check-binding", cl::init(false),
     cl::desc("Debug the correctness of the counterexample "
@@ -114,7 +114,7 @@ public:
           std::vector< std::vector<unsigned char> > values;
           for(int i = 0; i < out->numObjects; i++) {
               KTestObject& obj = out->objects[i]; 
-//              if(std::strcmp(obj.name,"model_version") == 0) continue;
+              if(std::strcmp(obj.name,"model_version") == 0) continue;
               objects.emplace_back(cache->CreateArray(obj.name, obj.numBytes));
               values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
           }
@@ -122,7 +122,7 @@ public:
           KeyType key;
           auto a = new Assignment(objects, values);
           assignmentsTable.insert(a);
-          if(numSeeds < 1) {
+          if(numSeeds < 2) {
               //can't put more than 1 seed as a subset of all
             CexCachingSolver::cache.insert(key, a);
           } else {

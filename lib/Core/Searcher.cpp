@@ -624,6 +624,7 @@ bool ZESTIPendingSearcher::empty() {
       if(smallestSensitiveDistance[es] != 999999 && exec->attemptToRevive(es, exec->solver->solver)) {
           currentBaseDepth = es->depth;
           bound =  ZestiBound * smallestSensitiveDistance[es];
+					bound = bound == 0 ? 1 : bound;
           update(nullptr, {es}, {});
           llvm::errs() << "ZESTI revive state at depth " << es->depth <<  " adding bound " << bound << "\n";
       } else {
