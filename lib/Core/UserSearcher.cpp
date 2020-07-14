@@ -183,12 +183,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = constructUserSearcherInternal(executor);
     auto pendingStateSearcher = constructUserSearcherInternal(executor);
     searcher = new PendingSearcher(searcher, pendingStateSearcher, &executor);
-    searcher = new SwappingSearcher(
-                  new PendingSearcher(new DFSSearcher(), new EmptySearcher(), &executor),
-                  searcher,
-                  [&](){ klee_message("Seeding done");
-                         executor.fastSolver = klee::createIndependentSolver(executor.fastSolver);
-                  });
+    //searcher = new SwappingSearcher(
+    //              new PendingSearcher(new DFSSearcher(), new EmptySearcher(), &executor),
+    //              searcher,
+    //              [&](){ klee_message("Seeding done");
+    //                     executor.fastSolver = klee::createIndependentSolver(executor.fastSolver);
+    //              });
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
