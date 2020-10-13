@@ -445,7 +445,9 @@ const char *Executor::TerminateReasonNames[] = {
   [ Unhandled ] = "xxx",
 };
 
-
+std::unique_ptr<Timer> stackDump;
+ExecutionState* currentState = nullptr;
+std::unique_ptr<llvm::raw_fd_ostream> dumpOutput;
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
@@ -462,6 +464,13 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
         klee_message("HaltTimer invoked");
         setHaltExecution(true);
       }));
+  dumpOutput = interpreterHandler->openOutputFile("stackTraces");
+  stackDump = make_unique<Timer>(time::Span("50ms"), [&]{
+    if(currentState) {
+        *dumpOutput << "\nThread 1\n";
+        currentState->dumpStack(*dumpOutput);
+    }
+  });
 
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout) UseForkedCoreSolver = true;
@@ -3481,6 +3490,8 @@ void Executor::run(ExecutionState &initialState) {
 
     executeInstruction(state, ki);
     timers.invoke();
+    currentState = &state;
+    stackDump->invoke(time::getWallTime());
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
 
